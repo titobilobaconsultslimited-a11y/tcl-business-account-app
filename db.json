@@ -1,0 +1,793 @@
+{
+  "clients": [
+    {
+      "id": "c1",
+      "name": "Lightspeech Consult",
+      "email": "info@lightspeech.com",
+      "phone": "2348012345678",
+      "address": "12 Lagos Way, Ikeja, Lagos",
+      "registration_type": "Business Name",
+      "registration_date": "2024-10-15",
+      "annual_returns_due_date": "2027-04-15",
+      "annual_returns_status": "pending"
+    },
+    {
+      "id": "c2",
+      "name": "ABC Ventures",
+      "email": "contact@abcventures.com",
+      "phone": "2348098765432",
+      "address": "45 Port Harcourt Cres, Wuse II, Abuja",
+      "registration_type": "Limited Company",
+      "registration_date": "2025-07-01",
+      "annual_returns_due_date": "2026-07-01",
+      "annual_returns_status": "pending"
+    },
+    {
+      "id": "c3",
+      "name": "Titobiloba Ventures",
+      "email": "tito@titobiloba.com",
+      "phone": "2349011223344",
+      "address": "78 Ring Road, Ibadan, Oyo",
+      "registration_type": "NGO",
+      "registration_date": "2026-01-01",
+      "annual_returns_due_date": "2027-01-01",
+      "annual_returns_status": "pending"
+    },
+    {
+      "id": "c_1781378844533",
+      "name": "Alpha Tech NGO",
+      "email": "",
+      "phone": "2347011223344",
+      "address": "",
+      "registration_type": null,
+      "registration_date": null,
+      "annual_returns_due_date": null,
+      "annual_returns_status": "pending"
+    },
+    {
+      "id": "c_1781379054276",
+      "name": "Alpha Tech NGO",
+      "email": "",
+      "phone": "2347011223344",
+      "address": "",
+      "registration_type": null,
+      "registration_date": null,
+      "annual_returns_due_date": null,
+      "annual_returns_status": "pending"
+    },
+    {
+      "id": "c_1781379530185",
+      "name": "Lightspeech Consult Test",
+      "email": "",
+      "phone": "2348012345678",
+      "address": "",
+      "registration_type": "Business Name",
+      "registration_date": "2024-10-15",
+      "annual_returns_due_date": "2027-04-15",
+      "annual_returns_status": "pending"
+    },
+    {
+      "id": "c_1781379639255",
+      "name": "Alpha Tech NGO",
+      "email": "",
+      "phone": "2347011223344",
+      "address": "",
+      "registration_type": "NGO",
+      "registration_date": "2025-06-01",
+      "annual_returns_due_date": "2026-06-01",
+      "annual_returns_status": "pending"
+    }
+  ],
+  "services": [
+    {
+      "id": "s1",
+      "name": "CAC Registration",
+      "price": 58000,
+      "description": "Company registration with Corporate Affairs Commission"
+    },
+    {
+      "id": "s2",
+      "name": "Tax Consultation",
+      "price": 25000,
+      "description": "Annual tax filing and planning consultation"
+    },
+    {
+      "id": "s3",
+      "name": "Business Plan Development",
+      "price": 150000,
+      "description": "Complete business plan for grants and loans"
+    },
+    {
+      "id": "s4",
+      "name": "Financial Audit",
+      "price": 85000,
+      "description": "Internal financial auditing and reporting"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "t_1781379553262",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 13500,
+      "date": "2026-06-13",
+      "description": "Annual Returns Filing - Lightspeech Consult Test (For Due Date 2026-04-15)",
+      "account": "Bank",
+      "client_id": "c_1781379530185",
+      "service_id": null
+    },
+    {
+      "id": "t_1781378731248",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 13500,
+      "date": "2026-06-13",
+      "description": "Annual Returns Filing - Lightspeech Consult (For Due Date 2026-04-15)",
+      "account": "Bank",
+      "client_id": "c1",
+      "service_id": null
+    },
+    {
+      "id": "t1",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 250000,
+      "date": "2026-01-15",
+      "description": "CAC Registration and Tax consulting",
+      "account": "Bank",
+      "client_id": "c1",
+      "service_id": "s1"
+    },
+    {
+      "id": "t2",
+      "type": "expense",
+      "category": "Transport",
+      "amount": 35000,
+      "date": "2026-01-18",
+      "description": "Fuel and logistics for client visit",
+      "account": "Cash"
+    },
+    {
+      "id": "t3",
+      "type": "expense",
+      "category": "Internet",
+      "amount": 15000,
+      "date": "2026-01-20",
+      "description": "Monthly internet subscription",
+      "account": "Bank"
+    },
+    {
+      "id": "t4",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 400000,
+      "date": "2026-02-10",
+      "description": "Business Plan Development",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s3"
+    },
+    {
+      "id": "t5",
+      "type": "expense",
+      "category": "Marketing",
+      "amount": 60000,
+      "date": "2026-02-14",
+      "description": "Social media ads",
+      "account": "Bank"
+    },
+    {
+      "id": "t6",
+      "type": "expense",
+      "category": "Transport",
+      "amount": 40000,
+      "date": "2026-02-18",
+      "description": "Courier and logistics fees",
+      "account": "Cash"
+    },
+    {
+      "id": "t7",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 700000,
+      "date": "2026-03-05",
+      "description": "Multiple CAC Registrations",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t8",
+      "type": "expense",
+      "category": "Office Supplies",
+      "amount": 25000,
+      "date": "2026-03-12",
+      "description": "Stationery and printing papers",
+      "account": "Cash"
+    },
+    {
+      "id": "t9",
+      "type": "expense",
+      "category": "Internet",
+      "amount": 15000,
+      "date": "2026-03-20",
+      "description": "Monthly internet subscription",
+      "account": "Bank"
+    },
+    {
+      "id": "t10",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 1200000,
+      "date": "2026-04-05",
+      "description": "Consolidated services - CAC & Audit",
+      "account": "Bank",
+      "client_id": "c1",
+      "service_id": "s4"
+    },
+    {
+      "id": "t11",
+      "type": "expense",
+      "category": "Marketing",
+      "amount": 100000,
+      "date": "2026-04-12",
+      "description": "Google Ads & flyers",
+      "account": "Bank"
+    },
+    {
+      "id": "t12",
+      "type": "expense",
+      "category": "Transport",
+      "amount": 80000,
+      "date": "2026-04-15",
+      "description": "Travel logistics to Abuja client",
+      "account": "Bank"
+    },
+    {
+      "id": "t-cac-0",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-01-1",
+      "description": "CAC Registration - Batch Client #4",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-1",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-01-2",
+      "description": "CAC Registration - Batch Client #5",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-2",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-01-3",
+      "description": "CAC Registration - Batch Client #6",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-3",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-01-4",
+      "description": "CAC Registration - Batch Client #7",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-4",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-01-5",
+      "description": "CAC Registration - Batch Client #8",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-5",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-01-6",
+      "description": "CAC Registration - Batch Client #9",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-6",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-01-7",
+      "description": "CAC Registration - Batch Client #10",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-7",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-01-8",
+      "description": "CAC Registration - Batch Client #11",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-8",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-02-9",
+      "description": "CAC Registration - Batch Client #12",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-9",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-02-10",
+      "description": "CAC Registration - Batch Client #13",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-10",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-02-11",
+      "description": "CAC Registration - Batch Client #14",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-11",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-02-12",
+      "description": "CAC Registration - Batch Client #15",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-12",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-02-13",
+      "description": "CAC Registration - Batch Client #16",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-13",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-02-14",
+      "description": "CAC Registration - Batch Client #17",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-14",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-02-15",
+      "description": "CAC Registration - Batch Client #18",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-15",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-02-16",
+      "description": "CAC Registration - Batch Client #19",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-16",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-03-17",
+      "description": "CAC Registration - Batch Client #20",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-17",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-03-18",
+      "description": "CAC Registration - Batch Client #21",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-18",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-03-19",
+      "description": "CAC Registration - Batch Client #22",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-19",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-03-20",
+      "description": "CAC Registration - Batch Client #23",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-20",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-03-21",
+      "description": "CAC Registration - Batch Client #24",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-21",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-03-22",
+      "description": "CAC Registration - Batch Client #25",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-22",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-03-23",
+      "description": "CAC Registration - Batch Client #26",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-23",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-03-24",
+      "description": "CAC Registration - Batch Client #27",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-24",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-04-25",
+      "description": "CAC Registration - Batch Client #28",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-25",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-04-1",
+      "description": "CAC Registration - Batch Client #29",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-26",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-04-2",
+      "description": "CAC Registration - Batch Client #30",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-27",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-04-3",
+      "description": "CAC Registration - Batch Client #31",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-28",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-04-4",
+      "description": "CAC Registration - Batch Client #32",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-29",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-04-5",
+      "description": "CAC Registration - Batch Client #33",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-30",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-04-6",
+      "description": "CAC Registration - Batch Client #34",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-31",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-04-7",
+      "description": "CAC Registration - Batch Client #35",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-32",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-05-8",
+      "description": "CAC Registration - Batch Client #36",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-33",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-05-9",
+      "description": "CAC Registration - Batch Client #37",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-34",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-05-10",
+      "description": "CAC Registration - Batch Client #38",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-35",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-05-11",
+      "description": "CAC Registration - Batch Client #39",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-36",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-05-12",
+      "description": "CAC Registration - Batch Client #40",
+      "account": "Bank",
+      "client_id": "c2",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-cac-37",
+      "type": "income",
+      "category": "Service Revenue",
+      "amount": 58000,
+      "date": "2026-05-13",
+      "description": "CAC Registration - Batch Client #41",
+      "account": "Bank",
+      "client_id": "c3",
+      "service_id": "s1"
+    },
+    {
+      "id": "t-exp-1",
+      "type": "expense",
+      "category": "Transport",
+      "amount": 125000,
+      "date": "2026-04-20",
+      "description": "Logistics and flight transport",
+      "account": "Bank"
+    },
+    {
+      "id": "t-exp-2",
+      "type": "expense",
+      "category": "Marketing",
+      "amount": 95000,
+      "date": "2026-04-22",
+      "description": "Brand materials and ads",
+      "account": "Bank"
+    },
+    {
+      "id": "t-exp-3",
+      "type": "expense",
+      "category": "Internet",
+      "amount": 35000,
+      "date": "2026-04-25",
+      "description": "Router installation",
+      "account": "Bank"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "inv1",
+      "invoice_number": "TCL-2026-001",
+      "client_id": "c1",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-04-15",
+      "status": "paid",
+      "discount": 5000,
+      "tax": 7.5,
+      "total": 60250,
+      "bank_details": "Sterling Bank - 0011223344",
+      "notes": "Thank you for your business!"
+    },
+    {
+      "id": "inv2",
+      "invoice_number": "TCL-2026-002",
+      "client_id": "c2",
+      "issue_date": "2026-04-10",
+      "due_date": "2026-04-24",
+      "status": "paid",
+      "discount": 0,
+      "tax": 7.5,
+      "total": 161250,
+      "bank_details": "Sterling Bank - 0011223344",
+      "notes": "Due upon receipt"
+    },
+    {
+      "id": "inv3",
+      "invoice_number": "TCL-2026-003",
+      "client_id": "c3",
+      "issue_date": "2026-04-28",
+      "due_date": "2026-05-15",
+      "status": "unpaid",
+      "discount": 0,
+      "tax": 0,
+      "total": 450000,
+      "bank_details": "Sterling Bank - 0011223344",
+      "notes": "Outstanding balance for Business Plan & Consult"
+    }
+  ],
+  "invoice_items": [
+    {
+      "id": "ii1",
+      "invoice_id": "inv1",
+      "service_id": "s1",
+      "description": "CAC Registration with Certificate",
+      "quantity": 1,
+      "unit_price": 58000,
+      "amount": 58000
+    },
+    {
+      "id": "ii2",
+      "invoice_id": "inv2",
+      "service_id": "s3",
+      "description": "Business Plan Development (Grant focused)",
+      "quantity": 1,
+      "unit_price": 150000,
+      "amount": 150000
+    },
+    {
+      "id": "ii3",
+      "invoice_id": "inv3",
+      "service_id": "s3",
+      "description": "Corporate Business Plan Suite",
+      "quantity": 3,
+      "unit_price": 150000,
+      "amount": 450000
+    }
+  ],
+  "receipts": [
+    {
+      "id": "r1",
+      "receipt_number": "RCT-2026-001",
+      "invoice_id": "inv1",
+      "payment_date": "2026-04-12",
+      "amount": 60250,
+      "payment_method": "Bank Transfer"
+    },
+    {
+      "id": "r2",
+      "receipt_number": "RCT-2026-002",
+      "invoice_id": "inv2",
+      "payment_date": "2026-04-14",
+      "amount": 161250,
+      "payment_method": "Bank Transfer"
+    }
+  ],
+  "settings": {
+    "theme": "dark",
+    "smtpHost": "",
+    "smtpPort": "587",
+    "smtpUser": "",
+    "smtpPass": "",
+    "smtpSecure": "false",
+    "senderEmail": "billing@titobilobaconsults.com",
+    "companyName": "Titobiloba Consults Limited",
+    "companyAddress": "12 Corporate Center, Lekki Phase 1, Lagos",
+    "companyPhone": "+234 801 234 5678",
+    "bankDetails": "Access Bank - Titobiloba Consults Ltd - 0123456789"
+  }
+}
