@@ -2394,8 +2394,10 @@ export default function Home() {
                       <div className="report-title-section" style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '24px' }}>
                         <img src="/logo.jpeg" alt="TCL Logo" style={{ width: '64px', height: '64px', borderRadius: '4px', objectFit: 'cover' }} />
                         <div>
-                          <h1 style={{ color: '#059669', fontSize: '1.75rem', fontWeight: '800', margin: 0 }}>Titobiloba Consults Limited</h1>
-                          <p style={{ fontSize: '0.85rem', color: '#64748B', margin: '4px 0 0 0' }}>12 Corporate Center, Lekki Phase 1, Lagos | Phone: +234 801 234 5678</p>
+                          <h1 style={{ color: '#059669', fontSize: '1.75rem', fontWeight: '800', margin: 0 }}>{settings.companyName || 'Titobiloba Consults Limited'}</h1>
+                          <p style={{ fontSize: '0.85rem', color: '#64748B', margin: '4px 0 0 0' }}>
+                            {settings.companyAddress || '78, Aina Road, Agiliti, Mile 12, Kosofe, Lagos State, Nigeria.'} | Phone: {settings.companyPhone || '2347012660971'}
+                          </p>
                         </div>
                       </div>
                       <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginTop: '12px', letterSpacing: '-0.5px' }}>
