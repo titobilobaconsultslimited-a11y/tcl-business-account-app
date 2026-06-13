@@ -781,13 +781,13 @@
     "theme": "dark",
     "smtpHost": "",
     "smtpPort": "587",
-    "smtpUser": "",
+    "smtpUser": "titobilobaconsultslimited@gmail.com",
     "smtpPass": "",
     "smtpSecure": "false",
-    "senderEmail": "billing@titobilobaconsults.com",
+    "senderEmail": "titobilobaconsultslimited@gmail.com",
     "companyName": "Titobiloba Consults Limited",
-    "companyAddress": "12 Corporate Center, Lekki Phase 1, Lagos",
-    "companyPhone": "+234 801 234 5678",
+    "companyAddress": "78, Aina Road, Agiliti, Mile 12, Kosofe, Lagos State, Nigeria.",
+    "companyPhone": "2347012660971",
     "bankDetails": "Access Bank - Titobiloba Consults Ltd - 0123456789"
   }
 }

@@ -51,6 +51,12 @@ export default function Home() {
   const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', address: '', registration_type: '', registration_date: '', annual_returns_due_date: '', annual_returns_status: 'pending' });
   const [newService, setNewService] = useState({ name: '', price: '', description: '' });
   
+  // Bulk Selection States
+  const [selectedTxIds, setSelectedTxIds] = useState([]);
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState([]);
+  const [selectedClientIds, setSelectedClientIds] = useState([]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState([]);
+  
   // Annual Returns Tracker States
   const [arSubTab, setArSubTab] = useState('overdue');
   const [isARSyncModalOpen, setIsARSyncModalOpen] = useState(false);
@@ -61,15 +67,15 @@ export default function Home() {
   const [invoiceClient, setInvoiceClient] = useState('');
   const [invoiceIssueDate, setInvoiceIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [invoiceDueDate, setInvoiceDueDate] = useState(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-  const [invoiceItems, setInvoiceItems] = useState([{ service_id: '', description: '', quantity: 1, unit_price: 0, amount: 0 }]);
-  const [invoiceDiscount, setInvoiceDiscount] = useState(0);
+  const [invoiceItems, setInvoiceItems] = useState([{ service_id: '', subtype: '', cost_price: '', description: '', quantity: 1, unit_price: '', amount: 0 }]);
+  const [invoiceDiscount, setInvoiceDiscount] = useState('');
   const [invoiceTax, setInvoiceTax] = useState(7.5); // Default 7.5%
   const [invoiceNotes, setInvoiceNotes] = useState('');
   
   // Receipt Viewer State
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [invoiceAmountPaid, setInvoiceAmountPaid] = useState(0);
+  const [invoiceAmountPaid, setInvoiceAmountPaid] = useState('');
 
   // Report Builder State
   const [reportMonth, setReportMonth] = useState('2026-04');
@@ -117,12 +123,23 @@ export default function Home() {
       console.error('Failed to load portal data:', err);
     } finally {
       setLoading(false);
+      setSelectedTxIds([]);
+      setSelectedInvoiceIds([]);
+      setSelectedClientIds([]);
+      setSelectedServiceIds([]);
     }
   };
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    setSelectedTxIds([]);
+    setSelectedInvoiceIds([]);
+    setSelectedClientIds([]);
+    setSelectedServiceIds([]);
+  }, [activeTab]);
 
   // RENDER CHARTS
   useEffect(() => {
@@ -385,10 +402,42 @@ export default function Home() {
     }
   };
 
+  const handleBulkDeleteClient = async () => {
+    if (confirm(`Are you sure you want to delete the ${selectedClientIds.length} selected clients? Invoices and transactions will remain but references will be removed.`)) {
+      try {
+        const res = await fetch(`/api/clients?id=${selectedClientIds.join(',')}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          setSelectedClientIds([]);
+          fetchData();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
   const handleDeleteService = async (id) => {
     if (confirm('Are you sure you want to delete this service?')) {
       await fetch(`/api/services?id=${id}`, { method: 'DELETE' });
       fetchData();
+    }
+  };
+
+  const handleBulkDeleteService = async () => {
+    if (confirm(`Are you sure you want to delete the ${selectedServiceIds.length} selected services?`)) {
+      try {
+        const res = await fetch(`/api/services?id=${selectedServiceIds.join(',')}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          setSelectedServiceIds([]);
+          fetchData();
+        }
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -399,10 +448,42 @@ export default function Home() {
     }
   };
 
+  const handleBulkDeleteTx = async () => {
+    if (confirm(`Are you sure you want to delete the ${selectedTxIds.length} selected transactions? This will affect your reports and balance calculations.`)) {
+      try {
+        const res = await fetch(`/api/transactions?id=${selectedTxIds.join(',')}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          setSelectedTxIds([]);
+          fetchData();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
   const handleDeleteInvoice = async (id) => {
     if (confirm('Are you sure you want to delete this invoice? Related receipt and auto-payment will not be deleted, but the invoice record will be gone.')) {
       await fetch(`/api/invoices?id=${id}`, { method: 'DELETE' });
       fetchData();
+    }
+  };
+
+  const handleBulkDeleteInvoice = async () => {
+    if (confirm(`Are you sure you want to delete the ${selectedInvoiceIds.length} selected invoices? Related receipts and payments will not be deleted.`)) {
+      try {
+        const res = await fetch(`/api/invoices?id=${selectedInvoiceIds.join(',')}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          setSelectedInvoiceIds([]);
+          fetchData();
+        }
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -458,7 +539,7 @@ export default function Home() {
   };
 
   const addInvoiceItemRow = () => {
-    setInvoiceItems([...invoiceItems, { service_id: '', subtype: '', cost_price: 0, description: '', quantity: 1, unit_price: 0, amount: 0 }]);
+    setInvoiceItems([...invoiceItems, { service_id: '', subtype: '', cost_price: '', description: '', quantity: 1, unit_price: '', amount: 0 }]);
   };
 
   const removeInvoiceItemRow = (index) => {
@@ -469,8 +550,8 @@ export default function Home() {
 
   // Invoice calculations
   const invoiceSubtotal = invoiceItems.reduce((sum, item) => sum + item.amount, 0);
-  const invoiceTaxAmount = (invoiceSubtotal - invoiceDiscount) * (invoiceTax / 100);
-  const invoiceTotal = invoiceSubtotal - invoiceDiscount + invoiceTaxAmount;
+  const invoiceTaxAmount = (invoiceSubtotal - Number(invoiceDiscount || 0)) * (invoiceTax / 100);
+  const invoiceTotal = invoiceSubtotal - Number(invoiceDiscount || 0) + invoiceTaxAmount;
 
   // Auto-generate invoice number
   const getNextInvoiceNumber = () => {
@@ -590,11 +671,11 @@ export default function Home() {
     
     // Determine status based on payment or button
     let finalStatus = status;
-    let finalAmountPaid = invoiceAmountPaid;
+    let finalAmountPaid = Number(invoiceAmountPaid || 0);
     if (status === 'paid') {
       finalAmountPaid = invoiceTotal;
       finalStatus = 'paid';
-    } else if (invoiceAmountPaid >= invoiceTotal) {
+    } else if (Number(invoiceAmountPaid || 0) >= invoiceTotal) {
       finalStatus = 'paid';
     }
 
@@ -606,7 +687,7 @@ export default function Home() {
       issue_date: invoiceIssueDate,
       due_date: invoiceDueDate,
       status: finalStatus,
-      discount: invoiceDiscount,
+      discount: Number(invoiceDiscount || 0),
       tax: invoiceTax,
       total: invoiceTotal,
       amount_paid: finalAmountPaid,
@@ -635,9 +716,9 @@ export default function Home() {
         alert(`Invoice ${invoiceNum} created successfully!`);
         // Reset builder
         setInvoiceClient('');
-        setInvoiceItems([{ service_id: '', subtype: '', cost_price: 0, description: '', quantity: 1, unit_price: 0, amount: 0 }]);
-        setInvoiceDiscount(0);
-        setInvoiceAmountPaid(0);
+        setInvoiceItems([{ service_id: '', subtype: '', cost_price: '', description: '', quantity: 1, unit_price: '', amount: 0 }]);
+        setInvoiceDiscount('');
+        setInvoiceAmountPaid('');
         setInvoiceNotes('');
         fetchData();
         setActiveTab('invoices');
@@ -1160,16 +1241,37 @@ export default function Home() {
                 <div className="dual-grid">
                   {/* Clients List */}
                   <div className="table-card">
-                    <div className="table-controls">
+                    <div className="table-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                       <h3>Registered Clients</h3>
-                      <button className="btn btn-primary btn-sm" onClick={() => setIsClientModalOpen(true)}>
-                        <IconPlus /> Add Client
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {selectedClientIds.length > 0 && (
+                          <button className="btn btn-danger btn-sm" onClick={handleBulkDeleteClient}>
+                            <IconTrash /> Delete Selected ({selectedClientIds.length})
+                          </button>
+                        )}
+                        <button className="btn btn-primary btn-sm" onClick={() => setIsClientModalOpen(true)}>
+                          <IconPlus /> Add Client
+                        </button>
+                      </div>
                     </div>
                     <div className="table-wrapper">
                       <table>
                         <thead>
                           <tr>
+                            <th style={{ width: '40px', textAlign: 'center' }}>
+                              <input 
+                                type="checkbox"
+                                checked={clients.length > 0 && selectedClientIds.length === clients.length}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedClientIds(clients.map(c => c.id));
+                                  } else {
+                                    setSelectedClientIds([]);
+                                  }
+                                }}
+                                style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
+                              />
+                            </th>
                             <th>Name</th>
                             <th>Contact</th>
                             <th>Address</th>
@@ -1178,7 +1280,21 @@ export default function Home() {
                         </thead>
                         <tbody>
                           {clients.map(c => (
-                            <tr key={c.id}>
+                            <tr key={c.id} className={selectedClientIds.includes(c.id) ? 'selected-row' : ''}>
+                              <td style={{ textAlign: 'center' }}>
+                                <input 
+                                  type="checkbox"
+                                  checked={selectedClientIds.includes(c.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedClientIds([...selectedClientIds, c.id]);
+                                    } else {
+                                      setSelectedClientIds(selectedClientIds.filter(id => id !== c.id));
+                                    }
+                                  }}
+                                  style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
+                                />
+                              </td>
                               <td><strong>{c.name}</strong></td>
                               <td>
                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.email}</div>
@@ -1199,16 +1315,37 @@ export default function Home() {
 
                   {/* Services List */}
                   <div className="table-card">
-                    <div className="table-controls">
+                    <div className="table-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                       <h3>Service Price-list</h3>
-                      <button className="btn btn-primary btn-sm" onClick={() => setIsServiceModalOpen(true)}>
-                        <IconPlus /> Add Service
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {selectedServiceIds.length > 0 && (
+                          <button className="btn btn-danger btn-sm" onClick={handleBulkDeleteService}>
+                            <IconTrash /> Delete Selected ({selectedServiceIds.length})
+                          </button>
+                        )}
+                        <button className="btn btn-primary btn-sm" onClick={() => setIsServiceModalOpen(true)}>
+                          <IconPlus /> Add Service
+                        </button>
+                      </div>
                     </div>
                     <div className="table-wrapper">
                       <table>
                         <thead>
                           <tr>
+                            <th style={{ width: '40px', textAlign: 'center' }}>
+                              <input 
+                                type="checkbox"
+                                checked={services.length > 0 && selectedServiceIds.length === services.length}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedServiceIds(services.map(s => s.id));
+                                  } else {
+                                    setSelectedServiceIds([]);
+                                  }
+                                }}
+                                style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
+                              />
+                            </th>
                             <th>Service</th>
                             <th>Default Rate</th>
                             <th>Description</th>
@@ -1217,7 +1354,21 @@ export default function Home() {
                         </thead>
                         <tbody>
                           {services.map(s => (
-                            <tr key={s.id}>
+                            <tr key={s.id} className={selectedServiceIds.includes(s.id) ? 'selected-row' : ''}>
+                              <td style={{ textAlign: 'center' }}>
+                                <input 
+                                  type="checkbox"
+                                  checked={selectedServiceIds.includes(s.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedServiceIds([...selectedServiceIds, s.id]);
+                                    } else {
+                                      setSelectedServiceIds(selectedServiceIds.filter(id => id !== s.id));
+                                    }
+                                  }}
+                                  style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
+                                />
+                              </td>
                               <td><strong>{s.name}</strong></td>
                               <td><strong style={{color: 'var(--primary-color)'}}>{formatMoney(s.price)}</strong></td>
                               <td style={{ whiteSpace: 'normal', maxWidth: '200px' }}>{s.description}</td>
@@ -1266,15 +1417,36 @@ export default function Home() {
                       </select>
                     </div>
 
-                    <button className="btn btn-primary" onClick={() => setIsTxModalOpen(true)}>
-                      <IconPlus /> Log Transaction
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {selectedTxIds.length > 0 && (
+                        <button className="btn btn-danger" onClick={handleBulkDeleteTx}>
+                          <IconTrash /> Delete Selected ({selectedTxIds.length})
+                        </button>
+                      )}
+                      <button className="btn btn-primary" onClick={() => setIsTxModalOpen(true)}>
+                        <IconPlus /> Log Transaction
+                      </button>
+                    </div>
                   </div>
 
                   <div className="table-wrapper">
                     <table>
                       <thead>
                         <tr>
+                          <th style={{ width: '40px', textAlign: 'center' }}>
+                            <input 
+                              type="checkbox"
+                              checked={filteredTransactions.length > 0 && selectedTxIds.length === filteredTransactions.length}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedTxIds(filteredTransactions.map(t => t.id));
+                                } else {
+                                  setSelectedTxIds([]);
+                                }
+                              }}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
+                            />
+                          </th>
                           <th>Date</th>
                           <th>Category</th>
                           <th>Description</th>
@@ -1285,7 +1457,21 @@ export default function Home() {
                       </thead>
                       <tbody>
                         {filteredTransactions.map(t => (
-                          <tr key={t.id}>
+                          <tr key={t.id} className={selectedTxIds.includes(t.id) ? 'selected-row' : ''}>
+                            <td style={{ textAlign: 'center' }}>
+                              <input 
+                                type="checkbox"
+                                checked={selectedTxIds.includes(t.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedTxIds([...selectedTxIds, t.id]);
+                                  } else {
+                                    setSelectedTxIds(selectedTxIds.filter(id => id !== t.id));
+                                  }
+                                }}
+                                style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
+                              />
+                            </td>
                             <td>{t.date}</td>
                             <td>
                               <span className={`badge ${t.type === 'income' ? 'badge-success' : 'badge-danger'}`}>
@@ -1607,11 +1793,11 @@ export default function Home() {
                                 </div>
                                 <div className="form-group">
                                   <label style={{ fontSize: '0.75rem' }}>Qty</label>
-                                  <input type="number" min="1" value={item.quantity} onChange={(e) => handleInvoiceItemChange(idx, 'quantity', Number(e.target.value))} />
+                                  <input type="number" min="1" value={item.quantity} onChange={(e) => handleInvoiceItemChange(idx, 'quantity', e.target.value === '' ? '' : Number(e.target.value))} />
                                 </div>
                                 <div className="form-group">
                                   <label style={{ fontSize: '0.75rem' }}>Unit Rate</label>
-                                  <input type="number" min="0" value={item.unit_price} onChange={(e) => handleInvoiceItemChange(idx, 'unit_price', Number(e.target.value))} />
+                                  <input type="number" min="0" value={item.unit_price} onChange={(e) => handleInvoiceItemChange(idx, 'unit_price', e.target.value === '' ? '' : Number(e.target.value))} />
                                 </div>
                                 <button className="btn btn-danger btn-sm" style={{ marginBottom: '4px' }} onClick={() => removeInvoiceItemRow(idx)}>
                                   ×
@@ -1630,11 +1816,11 @@ export default function Home() {
                                   </div>
                                   <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Cost Price (₦)</label>
-                                    <input type="number" min="0" value={item.cost_price || 0} onChange={(e) => handleInvoiceItemChange(idx, 'cost_price', Number(e.target.value))} />
+                                    <input type="number" min="0" value={item.cost_price === '' ? '' : item.cost_price} onChange={(e) => handleInvoiceItemChange(idx, 'cost_price', e.target.value === '' ? '' : Number(e.target.value))} />
                                   </div>
                                   <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Selling Price (₦)</label>
-                                    <input type="number" min="0" value={item.unit_price || 0} onChange={(e) => handleInvoiceItemChange(idx, 'unit_price', Number(e.target.value))} />
+                                    <input type="number" min="0" value={item.unit_price === '' ? '' : item.unit_price} onChange={(e) => handleInvoiceItemChange(idx, 'unit_price', e.target.value === '' ? '' : Number(e.target.value))} />
                                   </div>
                                 </div>
                               )}
@@ -1648,7 +1834,7 @@ export default function Home() {
                         <div className="form-row">
                           <div className="form-group">
                             <label>Discount Value (₦)</label>
-                            <input type="number" value={invoiceDiscount} onChange={(e) => setInvoiceDiscount(Number(e.target.value))} />
+                            <input type="number" value={invoiceDiscount} onChange={(e) => setInvoiceDiscount(e.target.value === '' ? '' : Number(e.target.value))} />
                           </div>
                           <div className="form-group">
                             <label>Tax rate (%)</label>
@@ -1659,11 +1845,11 @@ export default function Home() {
                         <div className="form-row">
                           <div className="form-group">
                             <label>Amount Client Paid (₦)</label>
-                            <input type="number" min="0" value={invoiceAmountPaid} onChange={(e) => setInvoiceAmountPaid(Number(e.target.value))} />
+                            <input type="number" min="0" value={invoiceAmountPaid} onChange={(e) => setInvoiceAmountPaid(e.target.value === '' ? '' : Number(e.target.value))} />
                           </div>
                           <div className="form-group">
                             <label>Balance Outstanding (₦)</label>
-                            <input type="text" value={formatMoney(Math.max(0, invoiceTotal - invoiceAmountPaid))} disabled style={{ backgroundColor: 'var(--panel-bg)', fontWeight: 'bold', color: 'var(--accent-yellow)' }} />
+                            <input type="text" value={formatMoney(Math.max(0, invoiceTotal - Number(invoiceAmountPaid || 0)))} disabled style={{ backgroundColor: 'var(--panel-bg)', fontWeight: 'bold', color: 'var(--accent-yellow)' }} />
                           </div>
                         </div>
 
@@ -1794,13 +1980,32 @@ export default function Home() {
 
                   {/* Invoices List */}
                   <div className="table-card">
-                    <div className="table-controls">
+                    <div className="table-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <h3>Invoices Ledger</h3>
+                      {selectedInvoiceIds.length > 0 && (
+                        <button className="btn btn-danger" onClick={handleBulkDeleteInvoice}>
+                          <IconTrash /> Delete Selected ({selectedInvoiceIds.length})
+                        </button>
+                      )}
                     </div>
                     <div className="table-wrapper">
                       <table>
                         <thead>
                           <tr>
+                            <th style={{ width: '40px', textAlign: 'center' }}>
+                              <input 
+                                type="checkbox"
+                                checked={invoices.length > 0 && selectedInvoiceIds.length === invoices.length}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedInvoiceIds(invoices.map(inv => inv.id));
+                                  } else {
+                                    setSelectedInvoiceIds([]);
+                                  }
+                                }}
+                                style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
+                              />
+                            </th>
                             <th>Invoice #</th>
                             <th>Client</th>
                             <th>Issue Date</th>
@@ -1812,7 +2017,21 @@ export default function Home() {
                         </thead>
                         <tbody>
                           {invoices.map(inv => (
-                            <tr key={inv.id}>
+                            <tr key={inv.id} className={selectedInvoiceIds.includes(inv.id) ? 'selected-row' : ''}>
+                              <td style={{ textAlign: 'center' }}>
+                                <input 
+                                  type="checkbox"
+                                  checked={selectedInvoiceIds.includes(inv.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedInvoiceIds([...selectedInvoiceIds, inv.id]);
+                                    } else {
+                                      setSelectedInvoiceIds(selectedInvoiceIds.filter(id => id !== inv.id));
+                                    }
+                                  }}
+                                  style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
+                                />
+                              </td>
                               <td>
                                 <button 
                                   className="btn-link" 

@@ -57,11 +57,14 @@ export async function PUT(request) {
 export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    if (!id) {
-      return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
+    const idStr = searchParams.get('id');
+    if (!idStr) {
+      return NextResponse.json({ error: 'Client ID(s) required' }, { status: 400 });
     }
-    await db.deleteClient(id);
+    const ids = idStr.split(',');
+    for (const id of ids) {
+      await db.deleteClient(id);
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
