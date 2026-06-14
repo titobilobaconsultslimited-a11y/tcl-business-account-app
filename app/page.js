@@ -24,6 +24,15 @@ export default function Home() {
   const [theme, setTheme] = useState('dark');
   const [dbType, setDbType] = useState('Local File');
   
+  // Authentication State
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  
   // Data State
   const [clients, setClients] = useState([]);
   const [services, setServices] = useState([]);
@@ -130,9 +139,57 @@ export default function Home() {
     }
   };
 
+  // Check session on mount
   useEffect(() => {
-    fetchData();
+    if (typeof window !== 'undefined') {
+      const isAuth = localStorage.getItem('tcl_logged_in') === 'true' || sessionStorage.getItem('tcl_logged_in') === 'true';
+      if (isAuth) {
+        setIsLoggedIn(true);
+      }
+    }
   }, []);
+
+  // Fetch all data only when logged in
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchData();
+    }
+  }, [isLoggedIn]);
+
+  // Login handler
+  const handleLogin = (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginLoading(true);
+    
+    // Simulate verification delay for a premium feel
+    setTimeout(() => {
+      if (loginEmail === 'titobilobaconsultslimited@gmail.com' && loginPassword === '*Oluwatobi1701') {
+        if (rememberMe) {
+          localStorage.setItem('tcl_logged_in', 'true');
+        } else {
+          sessionStorage.setItem('tcl_logged_in', 'true');
+        }
+        setIsLoggedIn(true);
+      } else {
+        setLoginError('Invalid email address or password. Please try again.');
+      }
+      setLoginLoading(false);
+    }, 800);
+  };
+
+  // Logout handler
+  const handleLogout = () => {
+    if (confirm('Are you sure you want to log out of the portal?')) {
+      localStorage.removeItem('tcl_logged_in');
+      sessionStorage.removeItem('tcl_logged_in');
+      setIsLoggedIn(false);
+      // Reset inputs
+      setLoginEmail('');
+      setLoginPassword('');
+      setLoginError('');
+    }
+  };
 
   useEffect(() => {
     setSelectedTxIds([]);
@@ -1039,6 +1096,113 @@ export default function Home() {
   };
   const arBadgeCount = getARBadgeCount();
 
+  if (!isLoggedIn) {
+    return (
+      <div className="login-page-wrapper">
+        <div className="login-card">
+          <div className="login-brand-header">
+            <div className="login-logo-container">
+              <img src="/logo.jpeg" alt="Titobiloba Consults Limited Logo" className="login-logo-img" />
+            </div>
+            <div className="login-title-group">
+              <h2 className="login-title">TCL Portal</h2>
+              <p className="login-subtitle">Sign in to access your business accounts</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {loginError && (
+              <div className="login-error-alert">
+                <IconAlert />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginBottom: '0px' }}>
+              <label htmlFor="email-input">Email Address</label>
+              <div className="login-input-wrapper">
+                <div className="login-input-icon">
+                  <IconMail />
+                </div>
+                <input
+                  id="email-input"
+                  type="email"
+                  placeholder="titobilobaconsultslimited@gmail.com"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '0px' }}>
+              <label htmlFor="password-input">Password</label>
+              <div className="login-input-wrapper">
+                <div className="login-input-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <input
+                  id="password-input"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••••••"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="login-form-options">
+              <label className="remember-me-label">
+                <input
+                  type="checkbox"
+                  className="remember-me-checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                Remember Me
+              </label>
+              <a href="#" className="forgot-password-link" onClick={(e) => { e.preventDefault(); alert("Contact system administrator to reset password."); }}>
+                Forgot Password?
+              </a>
+            </div>
+
+            <button type="submit" className="login-action-btn" disabled={loginLoading}>
+              {loginLoading ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="db-indicator pg" style={{ width: '12px', height: '12px' }} />
+                  Verifying...
+                </div>
+              ) : (
+                <>
+                  Sign In
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="login-footer-info">
+            &copy; {new Date().getFullYear()} Titobiloba Consults Limited. All rights reserved.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       {/* SIDEBAR NAVIGATION */}
@@ -1096,6 +1260,12 @@ export default function Home() {
           <li className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}>
             <button onClick={() => setActiveTab('settings')}>
               <IconSettings /> Settings
+            </button>
+          </li>
+          <li className="nav-item logout-nav-item">
+            <button onClick={handleLogout}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Logout
             </button>
           </li>
         </ul>
