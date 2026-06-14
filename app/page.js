@@ -12,6 +12,7 @@ const IconReports = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" hei
 const IconSettings = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 const IconPlus = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 const IconTrash = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+const IconEdit = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"/></svg>;
 const IconDownload = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
 const IconMail = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>;
 const IconSearch = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
@@ -51,6 +52,7 @@ export default function Home() {
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [isEditServiceModalOpen, setIsEditServiceModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [emailDetails, setEmailDetails] = useState({ to: '', subject: '', body: '', filename: '', elementId: '' });
   const [emailSending, setEmailSending] = useState(false);
@@ -59,6 +61,7 @@ export default function Home() {
   const [newTx, setNewTx] = useState({ type: 'income', category: 'Service Revenue', amount: '', date: new Date().toISOString().split('T')[0], description: '', account: 'Bank', client_id: '', service_id: '' });
   const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', address: '', registration_type: '', registration_date: '', annual_returns_due_date: '', annual_returns_status: 'pending' });
   const [newService, setNewService] = useState({ name: '', price: '', description: '' });
+  const [editService, setEditService] = useState({ id: '', name: '', price: '', description: '' });
   
   // Bulk Selection States
   const [selectedTxIds, setSelectedTxIds] = useState([]);
@@ -67,7 +70,7 @@ export default function Home() {
   const [selectedServiceIds, setSelectedServiceIds] = useState([]);
   
   // Annual Returns Tracker States
-  const [arSubTab, setArSubTab] = useState('overdue');
+  const [arSubTab, setArSubTab] = useState('all');
   const [isARSyncModalOpen, setIsARSyncModalOpen] = useState(false);
   const [arSyncClient, setArSyncClient] = useState(null);
   const [arSyncLogLedger, setArSyncLogLedger] = useState(true);
@@ -451,6 +454,38 @@ export default function Home() {
       console.error(err);
     }
   };
+
+  const handleEditServiceClick = (service) => {
+    setEditService({
+      id: service.id,
+      name: service.name,
+      price: service.price,
+      description: service.description || ''
+    });
+    setIsEditServiceModalOpen(true);
+  };
+
+  const handleUpdateService = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/services', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editService)
+      });
+      if (res.ok) {
+        setIsEditServiceModalOpen(false);
+        setEditService({ id: '', name: '', price: '', description: '' });
+        fetchData();
+      } else {
+        const error = await res.json();
+        alert('Error updating service: ' + error.error);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
 
   const handleDeleteClient = async (id) => {
     if (confirm('Are you sure you want to delete this client? Invoices and transactions will remain but references will be removed.')) {
@@ -1003,6 +1038,40 @@ export default function Home() {
     const activeClientsCount = clients.length;
     list.push({ text: `You have <strong>${activeClientsCount} registered clients</strong> in your ledger database.`, type: 'info' });
 
+    // Annual Returns insights
+    const overdueAR = clients.filter(c => {
+      const details = getAnnualReturnDetails(c);
+      return details && details.isOverdue && c.annual_returns_status === 'pending';
+    }).length;
+
+    const dueSoonAR = clients.filter(c => {
+      const details = getAnnualReturnDetails(c);
+      if (!details || details.isOverdue || c.annual_returns_status !== 'pending') return false;
+      const due = new Date(c.annual_returns_due_date);
+      const today = new Date();
+      return (due - today) <= 60 * 24 * 60 * 60 * 1000;
+    }).length;
+
+    const upcomingAR = clients.filter(c => {
+      if (!c.registration_type || !c.annual_returns_due_date) return false;
+      if (c.annual_returns_status === 'done') return false;
+      const details = getAnnualReturnDetails(c);
+      if (!details || details.isOverdue) return false;
+      const due = new Date(c.annual_returns_due_date);
+      const today = new Date();
+      return (due - today) > 60 * 24 * 60 * 60 * 1000;
+    }).length;
+
+    if (overdueAR > 0) {
+      list.push({ text: `You have <strong>${overdueAR} overdue annual return filing(s)</strong> that require immediate attention.`, type: 'danger' });
+    }
+    if (dueSoonAR > 0) {
+      list.push({ text: `You have <strong>${dueSoonAR} annual return filing(s) due soon</strong> (within 60 days).`, type: 'warning' });
+    }
+    if (upcomingAR > 0) {
+      list.push({ text: `You have <strong>${upcomingAR} upcoming annual return filing(s)</strong> scheduled.`, type: 'info' });
+    }
+
     return list;
   };
 
@@ -1542,11 +1611,16 @@ export default function Home() {
                               <td><strong>{s.name}</strong></td>
                               <td><strong style={{color: 'var(--primary-color)'}}>{formatMoney(s.price)}</strong></td>
                               <td style={{ whiteSpace: 'normal', maxWidth: '200px' }}>{s.description}</td>
-                              <td>
-                                <button className="btn btn-danger btn-sm" onClick={() => handleDeleteService(s.id)}>
-                                  <IconTrash />
-                                </button>
-                              </td>
+                                        <td>
+                                 <div style={{ display: 'flex', gap: '6px' }}>
+                                   <button className="btn btn-primary btn-sm" onClick={() => handleEditServiceClick(s)} title="Edit Service">
+                                     <IconEdit />
+                                   </button>
+                                   <button className="btn btn-danger btn-sm" onClick={() => handleDeleteService(s.id)} title="Delete Service">
+                                     <IconTrash />
+                                   </button>
+                                 </div>
+                               </td>
                             </tr>
                           ))}
                         </tbody>
@@ -1682,8 +1756,8 @@ export default function Home() {
                         <div className="modal-body" style={{ backgroundColor: '#F8FAFC' }}>
                           <div id="invoice-print-area" className="invoice-print-layout">
                             <div className="print-header">
-                              <div className="print-logo-section" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                <img src="/logo.jpeg" alt="TCL Logo" style={{ width: '48px', height: '48px', borderRadius: '4px', objectFit: 'cover' }} />
+                              <div className="print-logo-section" style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'center' }}>
+                                <img src="/logo.jpeg" alt="TCL Logo" style={{ width: '72px', height: '72px', borderRadius: '4px', objectFit: 'cover' }} />
                                 <div>
                                   <span className="print-company-name">{settings.companyName || 'Titobiloba Consults Limited'}</span>
                                   <div style={{fontSize: '0.8rem', color: '#64748B'}}>{settings.companyAddress}</div>
@@ -1824,8 +1898,8 @@ export default function Home() {
                         <div className="modal-body" style={{ backgroundColor: '#F8FAFC' }}>
                           <div id="receipt-print-area" className="invoice-print-layout">
                             <div className="print-header">
-                              <div className="print-logo-section" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                <img src="/logo.jpeg" alt="TCL Logo" style={{ width: '48px', height: '48px', borderRadius: '4px', objectFit: 'cover' }} />
+                              <div className="print-logo-section" style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'center' }}>
+                                <img src="/logo.jpeg" alt="TCL Logo" style={{ width: '72px', height: '72px', borderRadius: '4px', objectFit: 'cover' }} />
                                 <div>
                                   <span className="print-company-name">{settings.companyName || 'Titobiloba Consults Limited'}</span>
                                   <div style={{fontSize: '0.8rem', color: '#64748B'}}>{settings.companyAddress}</div>
@@ -2277,6 +2351,8 @@ export default function Home() {
                   return (due - today) > 60 * 24 * 60 * 60 * 1000;
                 });
 
+                const allRegisteredClients = clients.filter(c => c.registration_type && c.annual_returns_due_date);
+
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {/* Stats Row */}
@@ -2312,6 +2388,20 @@ export default function Home() {
                     {/* Sub Tab Navigation */}
                     <div className="table-card" style={{ padding: '0px', borderBottom: 'none' }}>
                       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--panel-bg)', borderRadius: '8px 8px 0 0' }}>
+                        <button 
+                          style={{ 
+                            padding: '16px 24px', 
+                            background: 'none', 
+                            border: 'none', 
+                            borderBottom: arSubTab === 'all' ? '3px solid var(--primary-color)' : 'none', 
+                            color: arSubTab === 'all' ? 'var(--primary-color)' : 'var(--text-secondary)',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                          }} 
+                          onClick={() => setArSubTab('all')}
+                        >
+                          All Filings ({allRegisteredClients.length})
+                        </button>
                         <button 
                           style={{ 
                             padding: '16px 24px', 
@@ -2358,6 +2448,97 @@ export default function Home() {
 
                       {/* Sub Tab Lists */}
                       <div style={{ padding: '24px' }}>
+                        {arSubTab === 'all' && (
+                          <div className="table-wrapper">
+                            {allRegisteredClients.length === 0 ? (
+                              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px' }}>No registered filings found. Add registration details in the Clients tab.</p>
+                            ) : (
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>Client / Entity</th>
+                                    <th>Type</th>
+                                    <th>Registration Date</th>
+                                    <th>Next Filing Date</th>
+                                    <th>Status</th>
+                                    <th>Total Cost</th>
+                                    <th>Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {allRegisteredClients.map(c => {
+                                    const details = getAnnualReturnDetails(c);
+                                    let statusBadge = null;
+                                    let statusText = '';
+                                    if (c.annual_returns_status === 'done') {
+                                      statusText = 'Completed';
+                                      statusBadge = <span className="badge badge-success" style={{ fontWeight: 'bold' }}>COMPLETED</span>;
+                                    } else if (details && details.isOverdue) {
+                                      statusText = 'Overdue';
+                                      statusBadge = <span className="badge badge-danger" style={{ fontWeight: 'bold' }}>OVERDUE</span>;
+                                    } else {
+                                      const due = new Date(c.annual_returns_due_date);
+                                      const today = new Date();
+                                      const isDueSoon = (due - today) <= 60 * 24 * 60 * 60 * 1000;
+                                      statusText = isDueSoon ? 'Due Soon' : 'Upcoming';
+                                      statusBadge = isDueSoon ? 
+                                        <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'var(--accent-yellow)', fontWeight: 'bold' }}>DUE SOON</span> : 
+                                        <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', fontWeight: 'bold' }}>UPCOMING</span>;
+                                    }
+
+                                    const waText = `Hello *${c.name}*,\n\nThis is a friendly reminder from *Titobiloba Consults Limited* regarding the annual returns filing for your entity registered as a *${c.registration_type}*.\n\n*Next Filing Due Date:* ${c.annual_returns_due_date}\n\n*Payment Breakdown:*\n- Official Filing Cost: ${formatMoney(details?.filingFee || 0)}\n- Professional Service Fee: ${formatMoney(details?.serviceFee || 0)}\n- Penalty Accrued: ${details?.penalty > 0 ? formatMoney(details.penalty) + ' (Overdue)' : 'None'}\n\n*Total Payable:* *${formatMoney(details?.total || 0)}*\n\nTo prevent further penalties or CAC query, please reach out to us to process your annual filing. Thank you!`;
+
+                                    return (
+                                      <tr key={c.id}>
+                                        <td>
+                                          <strong>{c.name}</strong>
+                                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone}</div>
+                                        </td>
+                                        <td>
+                                          <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary-color)', fontWeight: 'bold' }}>
+                                            {c.registration_type}
+                                          </span>
+                                        </td>
+                                        <td>{c.registration_date}</td>
+                                        <td>
+                                          <strong style={{ color: statusText === 'Overdue' ? 'var(--accent-red)' : statusText === 'Due Soon' ? 'var(--accent-yellow)' : 'inherit' }}>
+                                            {c.annual_returns_due_date}
+                                          </strong>
+                                        </td>
+                                        <td>{statusBadge}</td>
+                                        <td><strong>{details ? formatMoney(details.total) : '-'}</strong></td>
+                                        <td>
+                                          {c.annual_returns_status === 'pending' ? (
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                              <a 
+                                                href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waText)}`}
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                className="btn btn-secondary btn-sm"
+                                                style={{ backgroundColor: '#25D366', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                              >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                                                WhatsApp
+                                              </a>
+                                              <button className="btn btn-primary btn-sm" onClick={() => triggerARSyncModal(c)}>
+                                                <IconCheck /> Mark Filed
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--primary-color)', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                              <IconCheck /> Filing Completed
+                                            </span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+                        )}
+
                         {arSubTab === 'overdue' && (
                           <div className="table-wrapper">
                             {overdueClients.length === 0 ? (
@@ -2561,8 +2742,8 @@ export default function Home() {
                   {/* PRINT PERFORMANCE REPORT TEMPLATE */}
                   <div className="table-card" style={{ padding: '40px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0' }}>
                     <div id="monthly-report-print" className="report-print-layout">
-                      <div className="report-title-section" style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '24px' }}>
-                        <img src="/logo.jpeg" alt="TCL Logo" style={{ width: '64px', height: '64px', borderRadius: '4px', objectFit: 'cover' }} />
+                      <div className="report-title-section" style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'center', marginBottom: '24px' }}>
+                        <img src="/logo.jpeg" alt="TCL Logo" style={{ width: '72px', height: '72px', borderRadius: '4px', objectFit: 'cover' }} />
                         <div>
                           <h1 style={{ color: '#059669', fontSize: '1.75rem', fontWeight: '800', margin: 0 }}>{settings.companyName || 'Titobiloba Consults Limited'}</h1>
                           <p style={{ fontSize: '0.85rem', color: '#64748B', margin: '4px 0 0 0' }}>
@@ -3076,6 +3257,56 @@ export default function Home() {
           </form>
         </div>
       )}
+
+      {/* --- POPUP MODAL: EDIT SERVICE --- */}
+      {isEditServiceModalOpen && (
+        <div className="modal-overlay">
+          <form onSubmit={handleUpdateService} className="modal-content">
+            <div className="modal-header">
+              <span className="modal-title">Edit Service Record</span>
+              <button type="button" className="modal-close" onClick={() => setIsEditServiceModalOpen(false)}>×</button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Service Name</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={editService.name} 
+                  onChange={(e) => setEditService({ ...editService, name: e.target.value })}
+                  placeholder="e.g. Corporate Filing Suite"
+                />
+              </div>
+              <div className="form-group">
+                <label>Standard Price (₦)</label>
+                <input 
+                  type="number" 
+                  required 
+                  value={editService.price} 
+                  onChange={(e) => setEditService({ ...editService, price: e.target.value })}
+                  placeholder="e.g. 75000"
+                />
+              </div>
+              <div className="form-group">
+                <label>Service Description</label>
+                <input 
+                  type="text" 
+                  value={editService.description} 
+                  onChange={(e) => setEditService({ ...editService, description: e.target.value })}
+                  placeholder="Brief service description..."
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setIsEditServiceModalOpen(false)}>Cancel</button>
+              <button type="submit" className="btn btn-primary">Update Service</button>
+            </div>
+          </form>
+        </div>
+      )}
+
 
       {/* --- POPUP MODAL: SEND EMAIL --- */}
       {isEmailModalOpen && (

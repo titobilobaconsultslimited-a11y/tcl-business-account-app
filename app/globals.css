@@ -895,8 +895,9 @@ tr:hover td {
 
 .print-logo-section {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
 }
 
 .print-company-name {

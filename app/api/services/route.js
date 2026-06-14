@@ -43,3 +43,21 @@ export async function DELETE(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function PUT(request) {
+  try {
+    const body = await request.json();
+    if (!body.id || !body.name || body.price === undefined) {
+      return NextResponse.json({ error: 'Service ID, name, and price are required' }, { status: 400 });
+    }
+    const updatedService = await db.updateService(body.id, {
+      name: body.name,
+      price: Number(body.price),
+      description: body.description || ''
+    });
+    return NextResponse.json(updatedService);
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
