@@ -99,7 +99,15 @@ export default function Home() {
   const [invoiceAmountPaid, setInvoiceAmountPaid] = useState('');
 
   // Report Builder State
-  const [reportMonth, setReportMonth] = useState('2026-04');
+  const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const [reportMonth, setReportMonth] = useState(currentMonthStr);
+
+  // Invoice Edit Payment Modal State
+  const [isEditPaymentModalOpen, setIsEditPaymentModalOpen] = useState(false);
+  const [editPaymentInvoice, setEditPaymentInvoice] = useState(null);
+  const [editPaymentAmount, setEditPaymentAmount] = useState('');
+  const [editPaymentDate, setEditPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [editPaymentMethod, setEditPaymentMethod] = useState('Bank Transfer');
 
   // Chart Refs for destruction on re-render
   const incomeTrendChartRef = useRef(null);
@@ -937,6 +945,53 @@ export default function Home() {
     }
   };
 
+  const handleOpenEditPayment = (inv) => {
+    const balance = Number(inv.total) - Number(inv.amount_paid || 0);
+    setEditPaymentInvoice(inv);
+    setEditPaymentAmount(balance > 0 ? String(balance) : '');
+    setEditPaymentDate(new Date().toISOString().split('T')[0]);
+    setEditPaymentMethod('Bank Transfer');
+    setIsEditPaymentModalOpen(true);
+  };
+
+  const handleSubmitEditPayment = async (e) => {
+    e.preventDefault();
+    if (!editPaymentInvoice) return;
+    const amountNum = Number(editPaymentAmount);
+    const balance = Number(editPaymentInvoice.total) - Number(editPaymentInvoice.amount_paid || 0);
+    if (amountNum <= 0 || amountNum > balance) {
+      alert(`Please enter an amount between ₦1 and the remaining balance of ${formatMoney(balance)}.`);
+      return;
+    }
+    const isFullPayment = amountNum >= balance;
+    try {
+      const res = await fetch('/api/invoices', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editPaymentInvoice.id,
+          status: isFullPayment ? 'paid' : 'unpaid',
+          payment_date: editPaymentDate,
+          payment_method: editPaymentMethod,
+          account: 'Bank',
+          partial_amount: amountNum,
+          is_partial: !isFullPayment
+        })
+      });
+      if (res.ok) {
+        alert(isFullPayment ? 'Full payment recorded! Invoice marked as Paid.' : `Partial payment of ${formatMoney(amountNum)} recorded. Remaining balance updated.`);
+        setIsEditPaymentModalOpen(false);
+        setEditPaymentInvoice(null);
+        fetchData();
+      } else {
+        const err = await res.json();
+        alert('Error: ' + err.error);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   // --- PDF DOWNLOAD (html2pdf) ---
   const downloadPdf = (elementId, filename) => {
     if (typeof window === 'undefined' || !window.html2pdf) {
@@ -1384,7 +1439,12 @@ export default function Home() {
           </li>
           <li className={`nav-item ${activeTab === 'clients' ? 'active' : ''}`}>
             <button onClick={() => setActiveTab('clients')}>
-              <IconClients /> Clients & Services
+              <IconClients /> Clients
+            </button>
+          </li>
+          <li className={`nav-item ${activeTab === 'services' ? 'active' : ''}`}>
+            <button onClick={() => setActiveTab('services')}>
+              <IconServices /> Services
             </button>
           </li>
           <li className={`nav-item ${activeTab === 'transactions' ? 'active' : ''}`}>
@@ -1589,157 +1649,164 @@ export default function Home() {
                 </div>
               )}
 
-              {/* TAB 2: CLIENTS & SERVICES */}
+              {/* TAB 2: CLIENTS */}
               {activeTab === 'clients' && (
-                <div className="dual-grid">
-                  {/* Clients List */}
-                  <div className="table-card">
-                    <div className="table-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                      <h3>Registered Clients</h3>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {selectedClientIds.length > 0 && (
-                          <button className="btn btn-danger btn-sm" onClick={handleBulkDeleteClient}>
-                            <IconTrash /> Delete Selected ({selectedClientIds.length})
-                          </button>
-                        )}
-                        <button className="btn btn-primary btn-sm" onClick={() => setIsClientModalOpen(true)}>
-                          <IconPlus /> Add Client
+                <div className="table-card">
+                  <div className="table-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3>Registered Clients</h3>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {selectedClientIds.length > 0 && (
+                        <button className="btn btn-danger btn-sm" onClick={handleBulkDeleteClient}>
+                          <IconTrash /> Delete Selected ({selectedClientIds.length})
                         </button>
-                      </div>
-                    </div>
-                    <div className="table-wrapper">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th style={{ width: '40px', textAlign: 'center' }}>
-                              <input 
-                                type="checkbox"
-                                checked={clients.length > 0 && selectedClientIds.length === clients.length}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedClientIds(clients.map(c => c.id));
-                                  } else {
-                                    setSelectedClientIds([]);
-                                  }
-                                }}
-                                style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
-                              />
-                            </th>
-                            <th>Name</th>
-                            <th>Contact</th>
-                            <th>Address</th>
-                            <th>Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {clients.map(c => (
-                            <tr key={c.id} className={selectedClientIds.includes(c.id) ? 'selected-row' : ''}>
-                              <td style={{ textAlign: 'center' }}>
-                                <input 
-                                  type="checkbox"
-                                  checked={selectedClientIds.includes(c.id)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedClientIds([...selectedClientIds, c.id]);
-                                    } else {
-                                      setSelectedClientIds(selectedClientIds.filter(id => id !== c.id));
-                                    }
-                                  }}
-                                  style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
-                                />
-                              </td>
-                              <td><strong>{c.name}</strong></td>
-                              <td>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.email}</div>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone}</div>
-                              </td>
-                              <td style={{ whiteSpace: 'normal', maxWidth: '180px' }}>{c.address}</td>
-                              <td>
-                                <button className="btn btn-danger btn-sm" onClick={() => handleDeleteClient(c.id)}>
-                                  <IconTrash />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      )}
+                      <button className="btn btn-primary btn-sm" onClick={() => setIsClientModalOpen(true)}>
+                        <IconPlus /> Add Client
+                      </button>
                     </div>
                   </div>
-
-                  {/* Services List */}
-                  <div className="table-card">
-                    <div className="table-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                      <h3>Service Price-list</h3>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {selectedServiceIds.length > 0 && (
-                          <button className="btn btn-danger btn-sm" onClick={handleBulkDeleteService}>
-                            <IconTrash /> Delete Selected ({selectedServiceIds.length})
-                          </button>
-                        )}
-                        <button className="btn btn-primary btn-sm" onClick={() => setIsServiceModalOpen(true)}>
-                          <IconPlus /> Add Service
-                        </button>
-                      </div>
-                    </div>
-                    <div className="table-wrapper">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th style={{ width: '40px', textAlign: 'center' }}>
+                  <div className="table-wrapper">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th style={{ width: '40px', textAlign: 'center' }}>
+                            <input 
+                              type="checkbox"
+                              checked={clients.length > 0 && selectedClientIds.length === clients.length}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedClientIds(clients.map(c => c.id));
+                                } else {
+                                  setSelectedClientIds([]);
+                                }
+                              }}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
+                            />
+                          </th>
+                          <th>Name</th>
+                          <th>Contact</th>
+                          <th>Address</th>
+                          <th>🎂 Birthday</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {clients.map(c => (
+                          <tr key={c.id} className={selectedClientIds.includes(c.id) ? 'selected-row' : ''}>
+                            <td style={{ textAlign: 'center' }}>
                               <input 
                                 type="checkbox"
-                                checked={services.length > 0 && selectedServiceIds.length === services.length}
+                                checked={selectedClientIds.includes(c.id)}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setSelectedServiceIds(services.map(s => s.id));
+                                    setSelectedClientIds([...selectedClientIds, c.id]);
                                   } else {
-                                    setSelectedServiceIds([]);
+                                    setSelectedClientIds(selectedClientIds.filter(id => id !== c.id));
                                   }
                                 }}
                                 style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
                               />
-                            </th>
-                            <th>Service</th>
-                            <th>Default Rate</th>
-                            <th>Description</th>
-                            <th>Action</th>
+                            </td>
+                            <td><strong>{c.name}</strong></td>
+                            <td>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.email}</div>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone}</div>
+                            </td>
+                            <td style={{ whiteSpace: 'normal', maxWidth: '180px' }}>{c.address}</td>
+                            <td style={{ fontSize: '0.85rem' }}>
+                              {c.birthday ? (() => {
+                                const [mm, dd] = c.birthday.split('-');
+                                const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                                return <span style={{ color: 'var(--primary-color)', fontWeight: '600' }}>{MONTHS[parseInt(mm)-1]} {parseInt(dd)}</span>;
+                              })() : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                            </td>
+                            <td>
+                              <button className="btn btn-danger btn-sm" onClick={() => handleDeleteClient(c.id)}>
+                                <IconTrash />
+                              </button>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {services.map(s => (
-                            <tr key={s.id} className={selectedServiceIds.includes(s.id) ? 'selected-row' : ''}>
-                              <td style={{ textAlign: 'center' }}>
-                                <input 
-                                  type="checkbox"
-                                  checked={selectedServiceIds.includes(s.id)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedServiceIds([...selectedServiceIds, s.id]);
-                                    } else {
-                                      setSelectedServiceIds(selectedServiceIds.filter(id => id !== s.id));
-                                    }
-                                  }}
-                                  style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
-                                />
-                              </td>
-                              <td><strong>{s.name}</strong></td>
-                              <td><strong style={{color: 'var(--primary-color)'}}>{formatMoney(s.price)}</strong></td>
-                              <td style={{ whiteSpace: 'normal', maxWidth: '200px' }}>{s.description}</td>
-                                        <td>
-                                 <div style={{ display: 'flex', gap: '6px' }}>
-                                   <button className="btn btn-primary btn-sm" onClick={() => handleEditServiceClick(s)} title="Edit Service">
-                                     <IconEdit />
-                                   </button>
-                                   <button className="btn btn-danger btn-sm" onClick={() => handleDeleteService(s.id)} title="Delete Service">
-                                     <IconTrash />
-                                   </button>
-                                 </div>
-                               </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2b: SERVICES */}
+              {activeTab === 'services' && (
+                <div className="table-card">
+                  <div className="table-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3>Service Price-list</h3>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {selectedServiceIds.length > 0 && (
+                        <button className="btn btn-danger btn-sm" onClick={handleBulkDeleteService}>
+                          <IconTrash /> Delete Selected ({selectedServiceIds.length})
+                        </button>
+                      )}
+                      <button className="btn btn-primary btn-sm" onClick={() => setIsServiceModalOpen(true)}>
+                        <IconPlus /> Add Service
+                      </button>
                     </div>
+                  </div>
+                  <div className="table-wrapper">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th style={{ width: '40px', textAlign: 'center' }}>
+                            <input 
+                              type="checkbox"
+                              checked={services.length > 0 && selectedServiceIds.length === services.length}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedServiceIds(services.map(s => s.id));
+                                } else {
+                                  setSelectedServiceIds([]);
+                                }
+                              }}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
+                            />
+                          </th>
+                          <th>Service</th>
+                          <th>Default Rate</th>
+                          <th>Description</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {services.map(s => (
+                          <tr key={s.id} className={selectedServiceIds.includes(s.id) ? 'selected-row' : ''}>
+                            <td style={{ textAlign: 'center' }}>
+                              <input 
+                                type="checkbox"
+                                checked={selectedServiceIds.includes(s.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedServiceIds([...selectedServiceIds, s.id]);
+                                  } else {
+                                    setSelectedServiceIds(selectedServiceIds.filter(id => id !== s.id));
+                                  }
+                                }}
+                                style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
+                              />
+                            </td>
+                            <td><strong>{s.name}</strong></td>
+                            <td><strong style={{color: 'var(--primary-color)'}}>{formatMoney(s.price)}</strong></td>
+                            <td style={{ whiteSpace: 'normal', maxWidth: '260px' }}>{s.description}</td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button className="btn btn-primary btn-sm" onClick={() => handleEditServiceClick(s)} title="Edit Service">
+                                  <IconEdit />
+                                </button>
+                                <button className="btn btn-danger btn-sm" onClick={() => handleDeleteService(s.id)} title="Delete Service">
+                                  <IconTrash />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
@@ -2414,8 +2481,13 @@ export default function Home() {
                                     View
                                   </button>
                                   {inv.status === 'unpaid' && (
-                                    <button className="btn btn-secondary btn-sm" style={{color: 'var(--primary-color)'}} onClick={() => handleMarkInvoiceAsPaid(inv.id)} title="Mark as Paid">
-                                      <IconCheck /> Paid
+                                    <button className="btn btn-secondary btn-sm" style={{color: 'var(--accent-yellow)'}} onClick={() => handleOpenEditPayment(inv)} title="Log Payment">
+                                      <IconEdit /> Payment
+                                    </button>
+                                  )}
+                                  {inv.status === 'unpaid' && (
+                                    <button className="btn btn-secondary btn-sm" style={{color: 'var(--primary-color)'}} onClick={() => handleMarkInvoiceAsPaid(inv.id)} title="Mark as Fully Paid">
+                                      <IconCheck /> Full Pay
                                     </button>
                                   )}
                                   {inv.status === 'paid' && (
@@ -3059,9 +3131,19 @@ export default function Home() {
                           style={{ maxWidth: '240px' }}
                         />
                       </div>
-                      <button className="btn btn-primary" style={{ marginTop: '24px' }} onClick={() => downloadPdf('monthly-report-print', `TCL-Business-Performance-Report-${reportMonth}.pdf`)}>
-                        <IconDownload /> Export Performance Report (PDF)
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '24px', flexWrap: 'wrap' }}>
+                        <button className="btn btn-primary" onClick={() => downloadPdf('monthly-report-print', `TCL-Business-Performance-Report-${reportMonth}.pdf`)}>
+                          <IconDownload /> Download PDF Report
+                        </button>
+                        <button className="btn btn-secondary" onClick={() => triggerEmailModal(
+                          'monthly-report-print',
+                          `TCL-Report-${reportMonth}.pdf`,
+                          settings.senderEmail || '',
+                          'Report'
+                        )}>
+                          <IconMail /> Email Report
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -3707,6 +3789,86 @@ export default function Home() {
           </form>
         </div>
       )}
+
+      {/* --- POPUP MODAL: LOG INVOICE PAYMENT (PARTIAL / FULL) --- */}
+      {isEditPaymentModalOpen && editPaymentInvoice && (() => {
+        const balance = Number(editPaymentInvoice.total) - Number(editPaymentInvoice.amount_paid || 0);
+        return (
+          <div className="modal-overlay">
+            <form onSubmit={handleSubmitEditPayment} className="modal-content" style={{ maxWidth: '480px' }}>
+              <div className="modal-header">
+                <span className="modal-title">Log Payment — {editPaymentInvoice.invoice_number}</span>
+                <button type="button" className="modal-close" onClick={() => { setIsEditPaymentModalOpen(false); setEditPaymentInvoice(null); }}>×</button>
+              </div>
+              <div className="modal-body">
+                <div style={{ backgroundColor: 'var(--panel-bg)', padding: '12px', borderRadius: '6px', marginBottom: '16px', fontSize: '0.9rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Client:</span>
+                    <strong>{clients.find(c => c.id === editPaymentInvoice.client_id)?.name || 'Unknown Client'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Billed Total:</span>
+                    <strong>{formatMoney(editPaymentInvoice.total)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Already Paid:</span>
+                    <strong style={{ color: '#059669' }}>{formatMoney(editPaymentInvoice.amount_paid || 0)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '6px', marginTop: '6px' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Remaining Balance:</span>
+                    <strong style={{ color: '#D97706' }}>{formatMoney(balance)}</strong>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Amount to Pay (₦) <span style={{ color: 'var(--accent-red)' }}>*</span></label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max={balance}
+                    step="any"
+                    value={editPaymentAmount}
+                    onChange={(e) => setEditPaymentAmount(e.target.value)}
+                    placeholder="Enter amount"
+                  />
+                  <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>
+                    Must be between ₦1 and {formatMoney(balance)}
+                  </small>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Payment Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={editPaymentDate}
+                      onChange={(e) => setEditPaymentDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Payment Method</label>
+                    <select
+                      value={editPaymentMethod}
+                      onChange={(e) => setEditPaymentMethod(e.target.value)}
+                    >
+                      <option value="Bank Transfer">Bank Transfer</option>
+                      <option value="Cash">Cash</option>
+                      <option value="POS">POS</option>
+                      <option value="Cheque">Cheque</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => { setIsEditPaymentModalOpen(false); setEditPaymentInvoice(null); }}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Log Payment</button>
+              </div>
+            </form>
+          </div>
+        );
+      })()}
 
       {/* --- POPUP MODAL: ADD COMPANY TO ANNUAL RETURNS --- */}
       {isARAddCompanyOpen && (() => {

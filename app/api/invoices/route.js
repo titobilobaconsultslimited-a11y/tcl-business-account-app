@@ -104,7 +104,7 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const body = await request.json();
-    const { id, status, payment_date, payment_method, account } = body;
+    const { id, status, payment_date, payment_method, account, partial_amount, is_partial } = body;
     
     if (!id || !status) {
       return NextResponse.json({ error: 'Invoice ID and Status are required' }, { status: 400 });
@@ -120,40 +120,73 @@ export async function PUT(request) {
     const previousStatus = invoice.status;
     const previousAmountPaid = Number(invoice.amount_paid || 0);
     const total = Number(invoice.total);
-    const remainingBalance = total - previousAmountPaid;
+    const date = payment_date || new Date().toISOString().split('T')[0];
+    const method = payment_method || 'Bank Transfer';
+    const acc = account || 'Bank';
 
-    await db.updateInvoiceStatus(id, status, total); // sets amount_paid to total
-
-    // If transitioned to paid, create receipt and transaction for the remaining balance
-    if (status === 'paid' && previousStatus !== 'paid') {
-      const receiptNumber = 'RCT-' + invoice.invoice_number.substring(4) + (previousAmountPaid > 0 ? '-BAL' : '');
-      const date = payment_date || new Date().toISOString().split('T')[0];
-      const method = payment_method || 'Bank Transfer';
-      const acc = account || 'Bank';
-
-      if (remainingBalance > 0) {
-        await db.addReceipt({
-          receipt_number: receiptNumber,
-          invoice_id: invoice.id,
-          payment_date: date,
-          amount: remainingBalance,
-          payment_method: method
-        });
-
-        // Log income transaction
-        await db.addTransaction({
-          type: 'income',
-          category: 'Service Revenue',
-          amount: remainingBalance,
-          date: date,
-          description: `Final Balance Payment for Invoice ${invoice.invoice_number}`,
-          account: acc,
-          client_id: invoice.client_id || null
-        });
+    if (is_partial) {
+      const amountToPay = Number(partial_amount || 0);
+      if (amountToPay <= 0) {
+        return NextResponse.json({ error: 'Partial payment amount must be positive' }, { status: 400 });
       }
-    }
+      const newAmountPaid = previousAmountPaid + amountToPay;
+      const newStatus = newAmountPaid >= total ? 'paid' : 'unpaid';
 
-    return NextResponse.json({ success: true });
+      await db.updateInvoiceStatus(id, newStatus, newAmountPaid);
+
+      // Create partial payment receipt
+      const receiptNumber = 'RCT-' + invoice.invoice_number.substring(4) + '-PART-' + Date.now().toString().slice(-4);
+      await db.addReceipt({
+        receipt_number: receiptNumber,
+        invoice_id: invoice.id,
+        payment_date: date,
+        amount: amountToPay,
+        payment_method: method
+      });
+
+      // Log income transaction
+      await db.addTransaction({
+        type: 'income',
+        category: 'Service Revenue',
+        amount: amountToPay,
+        date: date,
+        description: `Partial Payment for Invoice ${invoice.invoice_number}`,
+        account: acc,
+        client_id: invoice.client_id || null
+      });
+
+      return NextResponse.json({ success: true, status: newStatus, amount_paid: newAmountPaid });
+    } else {
+      // Full payment workflow
+      const remainingBalance = total - previousAmountPaid;
+      await db.updateInvoiceStatus(id, status, total);
+
+      // If transitioned to paid, create receipt and transaction for the remaining balance
+      if (status === 'paid' && previousStatus !== 'paid') {
+        const receiptNumber = 'RCT-' + invoice.invoice_number.substring(4) + (previousAmountPaid > 0 ? '-BAL' : '');
+        if (remainingBalance > 0) {
+          await db.addReceipt({
+            receipt_number: receiptNumber,
+            invoice_id: invoice.id,
+            payment_date: date,
+            amount: remainingBalance,
+            payment_method: method
+          });
+
+          // Log income transaction
+          await db.addTransaction({
+            type: 'income',
+            category: 'Service Revenue',
+            amount: remainingBalance,
+            date: date,
+            description: `Final Balance Payment for Invoice ${invoice.invoice_number}`,
+            account: acc,
+            client_id: invoice.client_id || null
+          });
+        }
+      }
+      return NextResponse.json({ success: true });
+    }
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
