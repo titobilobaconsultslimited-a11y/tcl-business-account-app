@@ -24,7 +24,8 @@ export async function POST(request) {
       registration_type: body.registration_type || null,
       registration_date: body.registration_date || null,
       annual_returns_due_date: body.annual_returns_due_date || null,
-      annual_returns_status: body.annual_returns_status || 'pending'
+      annual_returns_status: body.annual_returns_status || 'pending',
+      birthday: body.birthday || null
     });
     return NextResponse.json(newClient);
   } catch (error) {
@@ -46,7 +47,9 @@ export async function PUT(request) {
       registration_type: body.registration_type || null,
       registration_date: body.registration_date || null,
       annual_returns_due_date: body.annual_returns_due_date || null,
-      annual_returns_status: body.annual_returns_status || 'pending'
+      annual_returns_status: body.annual_returns_status || 'pending',
+      birthday: body.birthday || null,
+      birthday_wished: body.birthday_wished || false
     });
     return NextResponse.json(updatedClient);
   } catch (error) {

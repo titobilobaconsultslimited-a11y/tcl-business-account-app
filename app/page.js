@@ -19,6 +19,7 @@ const IconSearch = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" heig
 const IconAlert = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
 const IconCheck = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
 const IconCalendar = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+const IconCake = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/><path d="M7 4l.5-1 .5 1"/><path d="M12 4l.5-1 .5 1"/><path d="M17 4l.5-1 .5 1"/></svg>;
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -59,7 +60,7 @@ export default function Home() {
 
   // Form Inputs
   const [newTx, setNewTx] = useState({ type: 'income', category: 'Service Revenue', amount: '', date: new Date().toISOString().split('T')[0], description: '', account: 'Bank', client_id: '', service_id: '' });
-  const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', address: '', registration_type: '', registration_date: '', annual_returns_due_date: '', annual_returns_status: 'pending' });
+  const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', address: '', registration_type: '', registration_date: '', annual_returns_due_date: '', annual_returns_status: 'pending', birthday: '' });
   const [newService, setNewService] = useState({ name: '', price: '', description: '' });
   const [editService, setEditService] = useState({ id: '', name: '', price: '', description: '' });
   
@@ -505,9 +506,22 @@ export default function Home() {
       });
       if (res.ok) {
         setIsClientModalOpen(false);
-        setNewClient({ name: '', email: '', phone: '', address: '', registration_type: '', registration_date: '', annual_returns_due_date: '', annual_returns_status: 'pending' });
+        setNewClient({ name: '', email: '', phone: '', address: '', registration_type: '', registration_date: '', annual_returns_due_date: '', annual_returns_status: 'pending', birthday: '' });
         fetchData();
       }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleMarkBirthdayWished = async (client) => {
+    try {
+      await fetch('/api/clients', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...client, birthday_wished: true })
+      });
+      fetchData();
     } catch (err) {
       console.error(err);
     }
@@ -1241,6 +1255,11 @@ export default function Home() {
   };
   const arBadgeCount = getARBadgeCount();
 
+  // Birthday badge: clients with birthday today and not yet wished
+  const today = new Date();
+  const todayMMDD = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const birthdayTodayCount = clients.filter(c => c.birthday === todayMMDD && !c.birthday_wished).length;
+
   if (!isLoggedIn) {
     return (
       <div className="login-page-wrapper">
@@ -1393,6 +1412,25 @@ export default function Home() {
                   borderRadius: '10px'
                 }}>
                   {arBadgeCount}
+                </span>
+              )}
+            </button>
+          </li>
+          <li className={`nav-item ${activeTab === 'birthdays' ? 'active' : ''}`}>
+            <button onClick={() => setActiveTab('birthdays')} style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              <IconCake />
+              <span style={{ marginLeft: '12px' }}>Birthdays</span>
+              {birthdayTodayCount > 0 && (
+                <span style={{
+                  marginLeft: 'auto',
+                  backgroundColor: '#EC4899',
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  fontWeight: '700',
+                  padding: '2px 6px',
+                  borderRadius: '10px'
+                }}>
+                  {birthdayTodayCount}
                 </span>
               )}
             </button>
@@ -2812,6 +2850,201 @@ export default function Home() {
                 );
               })()}
 
+              {/* TAB: BIRTHDAYS */}
+              {activeTab === 'birthdays' && (() => {
+                const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                const todayM = today.getMonth() + 1;
+                const todayD = today.getDate();
+
+                // Build per-month groups (only clients with birthday set)
+                const clientsWithBirthday = clients.filter(c => c.birthday && /^\d{2}-\d{2}$/.test(c.birthday));
+
+                const grouped = {};
+                clientsWithBirthday.forEach(c => {
+                  const [mm] = c.birthday.split('-');
+                  const monthIdx = parseInt(mm, 10) - 1;
+                  if (!grouped[monthIdx]) grouped[monthIdx] = [];
+                  grouped[monthIdx].push(c);
+                });
+
+                // Sort months: start from current month
+                const sortedMonthKeys = [
+                  ...Array.from({ length: 12 }, (_, i) => (todayM - 1 + i) % 12)
+                ].filter(k => grouped[k]);
+
+                const todayBirthdays = clientsWithBirthday.filter(c => {
+                  const [mm, dd] = c.birthday.split('-');
+                  return parseInt(mm) === todayM && parseInt(dd) === todayD;
+                });
+
+                const thisMonthUpcoming = clientsWithBirthday.filter(c => {
+                  const [mm, dd] = c.birthday.split('-');
+                  return parseInt(mm) === todayM && parseInt(dd) > todayD;
+                });
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {/* Stats Row */}
+                    <div className="stats-row">
+                      <div className="stat-card outstanding" style={{ borderLeft: '4px solid #EC4899' }}>
+                        <div className="stat-header">
+                          <span className="stat-title">🎂 Birthdays Today</span>
+                          <div className="stat-icon" style={{ color: '#EC4899' }}><IconCake /></div>
+                        </div>
+                        <span className="stat-value">{todayBirthdays.length}</span>
+                        <span className="stat-meta">{todayBirthdays.filter(c => !c.birthday_wished).length} not yet wished</span>
+                      </div>
+                      <div className="stat-card outstanding" style={{ borderLeft: '4px solid var(--accent-yellow)' }}>
+                        <div className="stat-header">
+                          <span className="stat-title">Upcoming This Month</span>
+                          <div className="stat-icon" style={{ color: 'var(--accent-yellow)' }}><IconCalendar /></div>
+                        </div>
+                        <span className="stat-value">{thisMonthUpcoming.length}</span>
+                        <span className="stat-meta">Later in {MONTHS[todayM - 1]}</span>
+                      </div>
+                      <div className="stat-card profit" style={{ borderLeft: '4px solid var(--primary-color)' }}>
+                        <div className="stat-header">
+                          <span className="stat-title">Total Tracked</span>
+                          <div className="stat-icon" style={{ color: 'var(--primary-color)' }}><IconClients /></div>
+                        </div>
+                        <span className="stat-value">{clientsWithBirthday.length}</span>
+                        <span className="stat-meta">Clients with birthdays</span>
+                      </div>
+                    </div>
+
+                    {clientsWithBirthday.length === 0 ? (
+                      <div className="table-card" style={{ padding: '48px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🎂</div>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>No birthdays tracked yet. Add a client's date of birth from the Clients & Services tab.</p>
+                        <button className="btn btn-primary" onClick={() => setActiveTab('clients')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <IconPlus /> Go to Clients
+                        </button>
+                      </div>
+                    ) : (
+                      sortedMonthKeys.map(monthIdx => {
+                        const monthClients = [...grouped[monthIdx]].sort((a, b) => {
+                          const [, dA] = a.birthday.split('-');
+                          const [, dB] = b.birthday.split('-');
+                          return parseInt(dA) - parseInt(dB);
+                        });
+                        const isCurrentMonth = monthIdx === todayM - 1;
+
+                        return (
+                          <div key={monthIdx} className="table-card" style={{ overflow: 'hidden' }}>
+                            {/* Month Header */}
+                            <div style={{
+                              padding: '14px 20px',
+                              background: isCurrentMonth
+                                ? 'linear-gradient(90deg, rgba(236,72,153,0.15), transparent)'
+                                : 'var(--panel-bg)',
+                              borderBottom: '1px solid var(--border-color)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px'
+                            }}>
+                              <span style={{ fontSize: '1.3rem' }}>🎂</span>
+                              <strong style={{ fontSize: '1.05rem', color: isCurrentMonth ? '#EC4899' : 'var(--text-primary)' }}>
+                                {MONTHS[monthIdx]}
+                              </strong>
+                              {isCurrentMonth && (
+                                <span style={{ fontSize: '0.75rem', backgroundColor: '#EC4899', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: '700', marginLeft: '4px' }}>THIS MONTH</span>
+                              )}
+                              <span style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{monthClients.length} client{monthClients.length !== 1 ? 's' : ''}</span>
+                            </div>
+
+                            {/* Clients table */}
+                            <div className="table-wrapper" style={{ padding: '0' }}>
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>Client / Contact</th>
+                                    <th>Birthday</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {monthClients.map(c => {
+                                    const [mm, dd] = c.birthday.split('-');
+                                    const isToday = parseInt(mm) === todayM && parseInt(dd) === todayD;
+                                    const waMsg = `Hello *${c.name}* 🎉\n\nWishing you a very happy birthday from all of us at *Titobiloba Consults Limited*! 🎂\n\nMay this special day bring you joy, prosperity and continued success. Thank you for being a valued client!\n\n- Titobiloba Consults`;
+
+                                    return (
+                                      <tr key={c.id} style={{
+                                        backgroundColor: isToday && !c.birthday_wished ? 'rgba(236,72,153,0.06)' : 'transparent'
+                                      }}>
+                                        <td>
+                                          <strong>{c.name}</strong>
+                                          {isToday && !c.birthday_wished && (
+                                            <span style={{ marginLeft: '8px', fontSize: '1rem' }}>🎉</span>
+                                          )}
+                                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone || 'No phone'}</div>
+                                        </td>
+                                        <td>
+                                          <span style={{ fontWeight: '600', color: isToday ? '#EC4899' : 'inherit' }}>
+                                            {MONTHS[monthIdx].slice(0, 3)} {parseInt(dd)}
+                                          </span>
+                                          {isToday && <span style={{ marginLeft: '6px', fontSize: '0.75rem', backgroundColor: 'rgba(236,72,153,0.15)', color: '#EC4899', padding: '2px 6px', borderRadius: '10px', fontWeight: '700' }}>TODAY</span>}
+                                        </td>
+                                        <td>
+                                          {c.birthday_wished
+                                            ? <span className="badge badge-success" style={{ fontWeight: 'bold' }}>✓ WISHED</span>
+                                            : isToday
+                                              ? <span className="badge" style={{ backgroundColor: 'rgba(236,72,153,0.1)', color: '#EC4899', fontWeight: 'bold' }}>🎂 TODAY!</span>
+                                              : <span className="badge" style={{ backgroundColor: 'rgba(59,130,246,0.1)', color: '#3B82F6', fontWeight: 'bold' }}>UPCOMING</span>
+                                          }
+                                        </td>
+                                        <td>
+                                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            {c.phone && (
+                                              <a
+                                                href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waMsg)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="btn btn-secondary btn-sm"
+                                                style={{ backgroundColor: '#25D366', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                                onClick={() => { if (!c.birthday_wished && isToday) handleMarkBirthdayWished(c); }}
+                                              >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                                                WhatsApp
+                                              </a>
+                                            )}
+                                            {!c.birthday_wished ? (
+                                              <button
+                                                className="btn btn-primary btn-sm"
+                                                onClick={() => handleMarkBirthdayWished(c)}
+                                                title="Mark as wished — hides the reminder"
+                                              >
+                                                <IconCheck /> Wished
+                                              </button>
+                                            ) : (
+                                              <button
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={async () => {
+                                                  await fetch('/api/clients', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...c, birthday_wished: false }) });
+                                                  fetchData();
+                                                }}
+                                                title="Reset — show reminder again"
+                                              >
+                                                ↩ Reset
+                                              </button>
+                                            )}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* TAB 5: MONTHLY REPORTS */}
               {activeTab === 'reports' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -3292,6 +3525,25 @@ export default function Home() {
                   </div>
                 </div>
               )}
+
+              <div className="form-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '8px' }}>
+                <label>🎂 Date of Birth (for birthday reminders)</label>
+                <input
+                  type="date"
+                  value={newClient.birthday ? `1900-${newClient.birthday}` : ''}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const parts = e.target.value.split('-');
+                      setNewClient({ ...newClient, birthday: `${parts[1]}-${parts[2]}` });
+                    } else {
+                      setNewClient({ ...newClient, birthday: '' });
+                    }
+                  }}
+                  placeholder="MM-DD"
+                  style={{ maxWidth: '220px' }}
+                />
+                <small style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', display: 'block', marginTop: '4px' }}>Only the month and day are saved (no year needed)</small>
+              </div>
             </div>
 
             <div className="modal-footer">
