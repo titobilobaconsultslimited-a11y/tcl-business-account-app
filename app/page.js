@@ -75,6 +75,14 @@ export default function Home() {
   const [arSyncClient, setArSyncClient] = useState(null);
   const [arSyncLogLedger, setArSyncLogLedger] = useState(true);
 
+  // AR Add Company Modal States
+  const [isARAddCompanyOpen, setIsARAddCompanyOpen] = useState(false);
+  const [arAddMode, setArAddMode] = useState('new'); // 'new' | 'existing'
+  const [arNewCompany, setArNewCompany] = useState({ name: '', email: '', phone: '', address: '', registration_type: '', registration_date: '', annual_returns_due_date: '', annual_returns_status: 'pending' });
+  const [arExistingClientId, setArExistingClientId] = useState('');
+  const [arExistingRegDetails, setArExistingRegDetails] = useState({ registration_type: '', registration_date: '', annual_returns_due_date: '' });
+  const [arClientSearch, setArClientSearch] = useState('');
+
   // Invoice Builder State
   const [invoiceClient, setInvoiceClient] = useState('');
   const [invoiceIssueDate, setInvoiceIssueDate] = useState(new Date().toISOString().split('T')[0]);
@@ -399,6 +407,74 @@ export default function Home() {
     const months = type === 'Business Name' ? 18 : 12;
     date.setMonth(date.getMonth() + months);
     return date.toISOString().split('T')[0];
+  };
+
+  // AR Add Company handlers
+  const handleARNewCompanyTypeChange = (type) => {
+    const dueDate = calculateInitialDue(type, arNewCompany.registration_date);
+    setArNewCompany({ ...arNewCompany, registration_type: type, annual_returns_due_date: dueDate });
+  };
+
+  const handleARNewCompanyDateChange = (dateStr) => {
+    const dueDate = calculateInitialDue(arNewCompany.registration_type, dateStr);
+    setArNewCompany({ ...arNewCompany, registration_date: dateStr, annual_returns_due_date: dueDate });
+  };
+
+  const handleARExistingRegTypeChange = (type) => {
+    const dueDate = calculateInitialDue(type, arExistingRegDetails.registration_date);
+    setArExistingRegDetails({ ...arExistingRegDetails, registration_type: type, annual_returns_due_date: dueDate });
+  };
+
+  const handleARExistingRegDateChange = (dateStr) => {
+    const dueDate = calculateInitialDue(arExistingRegDetails.registration_type, dateStr);
+    setArExistingRegDetails({ ...arExistingRegDetails, registration_date: dateStr, annual_returns_due_date: dueDate });
+  };
+
+  const handleARAddCompanySubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (arAddMode === 'new') {
+        if (!arNewCompany.name || !arNewCompany.registration_type || !arNewCompany.registration_date) {
+          alert('Please fill in company name, registration type, and registration date.');
+          return;
+        }
+        const res = await fetch('/api/clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(arNewCompany)
+        });
+        if (!res.ok) { const err = await res.json(); alert('Error: ' + err.error); return; }
+      } else {
+        if (!arExistingClientId || !arExistingRegDetails.registration_type || !arExistingRegDetails.registration_date) {
+          alert('Please select a client and fill in registration type and date.');
+          return;
+        }
+        const clientToUpdate = clients.find(c => c.id === arExistingClientId);
+        if (!clientToUpdate) { alert('Selected client not found.'); return; }
+        const res = await fetch('/api/clients', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...clientToUpdate,
+            registration_type: arExistingRegDetails.registration_type,
+            registration_date: arExistingRegDetails.registration_date,
+            annual_returns_due_date: arExistingRegDetails.annual_returns_due_date,
+            annual_returns_status: 'pending'
+          })
+        });
+        if (!res.ok) { const err = await res.json(); alert('Error: ' + err.error); return; }
+      }
+      // Reset & close
+      setIsARAddCompanyOpen(false);
+      setArAddMode('new');
+      setArNewCompany({ name: '', email: '', phone: '', address: '', registration_type: '', registration_date: '', annual_returns_due_date: '', annual_returns_status: 'pending' });
+      setArExistingClientId('');
+      setArExistingRegDetails({ registration_type: '', registration_date: '', annual_returns_due_date: '' });
+      setArClientSearch('');
+      fetchData();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleNewClientTypeChange = (type) => {
@@ -2355,6 +2431,18 @@ export default function Home() {
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {/* Header with Add Company Button */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        className="btn btn-primary"
+                        id="ar-add-company-btn"
+                        onClick={() => { setIsARAddCompanyOpen(true); setArAddMode('new'); }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                      >
+                        <IconPlus /> Add Registered Company
+                      </button>
+                    </div>
+
                     {/* Stats Row */}
                     <div className="stats-row">
                       <div className="stat-card outstanding" style={{ borderLeft: '4px solid var(--accent-red)' }}>
@@ -2451,7 +2539,12 @@ export default function Home() {
                         {arSubTab === 'all' && (
                           <div className="table-wrapper">
                             {allRegisteredClients.length === 0 ? (
-                              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px' }}>No registered filings found. Add registration details in the Clients tab.</p>
+                              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>No registered companies found. Add a company to begin tracking annual returns.</p>
+                                <button className="btn btn-primary" onClick={() => { setIsARAddCompanyOpen(true); setArAddMode('new'); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                  <IconPlus /> Add Registered Company
+                                </button>
+                              </div>
                             ) : (
                               <table>
                                 <thead>
@@ -3362,6 +3455,208 @@ export default function Home() {
           </form>
         </div>
       )}
+
+      {/* --- POPUP MODAL: ADD COMPANY TO ANNUAL RETURNS --- */}
+      {isARAddCompanyOpen && (() => {
+        const unregisteredClients = clients.filter(c => !c.registration_type || !c.annual_returns_due_date);
+        const filteredUnreg = arClientSearch.trim()
+          ? unregisteredClients.filter(c => c.name.toLowerCase().includes(arClientSearch.toLowerCase()) || (c.phone && c.phone.includes(arClientSearch)))
+          : unregisteredClients;
+        const selectedExistingClient = clients.find(c => c.id === arExistingClientId);
+
+        return (
+          <div className="modal-overlay">
+            <form onSubmit={handleARAddCompanySubmit} className="modal-content" style={{ maxWidth: '560px' }}>
+              <div className="modal-header">
+                <span className="modal-title">Add Company to Annual Returns</span>
+                <button type="button" className="modal-close" onClick={() => { setIsARAddCompanyOpen(false); setArClientSearch(''); setArExistingClientId(''); setArExistingRegDetails({ registration_type: '', registration_date: '', annual_returns_due_date: '' }); }}>×</button>
+              </div>
+
+              <div className="modal-body">
+                {/* Mode Toggle */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', backgroundColor: 'var(--panel-bg)', borderRadius: '10px', padding: '6px' }}>
+                  <button
+                    type="button"
+                    id="ar-mode-new"
+                    onClick={() => setArAddMode('new')}
+                    style={{
+                      flex: 1, padding: '10px', border: 'none', borderRadius: '7px', cursor: 'pointer', fontWeight: '600', fontSize: '0.9rem',
+                      backgroundColor: arAddMode === 'new' ? 'var(--primary-color)' : 'transparent',
+                      color: arAddMode === 'new' ? '#fff' : 'var(--text-secondary)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    🏢 Register New Company
+                  </button>
+                  <button
+                    type="button"
+                    id="ar-mode-existing"
+                    onClick={() => setArAddMode('existing')}
+                    style={{
+                      flex: 1, padding: '10px', border: 'none', borderRadius: '7px', cursor: 'pointer', fontWeight: '600', fontSize: '0.9rem',
+                      backgroundColor: arAddMode === 'existing' ? 'var(--primary-color)' : 'transparent',
+                      color: arAddMode === 'existing' ? '#fff' : 'var(--text-secondary)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    👥 From Existing Clients
+                  </button>
+                </div>
+
+                {/* --- NEW COMPANY MODE --- */}
+                {arAddMode === 'new' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '16px', padding: '10px', backgroundColor: 'var(--panel-bg)', borderRadius: '6px', borderLeft: '3px solid var(--primary-color)' }}>
+                      This will create a new client record and immediately add them to the Annual Returns tracker.
+                    </div>
+                    <div className="form-group">
+                      <label>Company / Entity Name *</label>
+                      <input type="text" required id="ar-new-name" value={arNewCompany.name} onChange={(e) => setArNewCompany({ ...arNewCompany, name: e.target.value })} placeholder="e.g. Sunrise Ventures Ltd" />
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Phone Number</label>
+                        <input type="text" id="ar-new-phone" value={arNewCompany.phone} onChange={(e) => setArNewCompany({ ...arNewCompany, phone: e.target.value })} placeholder="e.g. 2348012345678" />
+                      </div>
+                      <div className="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="ar-new-email" value={arNewCompany.email} onChange={(e) => setArNewCompany({ ...arNewCompany, email: e.target.value })} placeholder="contact@company.com" />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label>Address</label>
+                      <input type="text" id="ar-new-address" value={arNewCompany.address} onChange={(e) => setArNewCompany({ ...arNewCompany, address: e.target.value })} placeholder="Street address, city, state" />
+                    </div>
+                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '8px' }}>
+                      <div className="form-group">
+                        <label>CAC Registration Type *</label>
+                        <select id="ar-new-type" required value={arNewCompany.registration_type} onChange={(e) => handleARNewCompanyTypeChange(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)' }}>
+                          <option value="">Select registration type...</option>
+                          <option value="Business Name">Business Name</option>
+                          <option value="NGO">NGO</option>
+                          <option value="Limited Company">Limited Company</option>
+                        </select>
+                      </div>
+                      {arNewCompany.registration_type && (
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label>CAC Registration Date *</label>
+                            <input type="date" id="ar-new-regdate" required value={arNewCompany.registration_date} onChange={(e) => handleARNewCompanyDateChange(e.target.value)} />
+                          </div>
+                          <div className="form-group">
+                            <label>First Returns Due Date (auto-calculated)</label>
+                            <input type="date" disabled value={arNewCompany.annual_returns_due_date} style={{ backgroundColor: 'var(--panel-bg)', fontWeight: 'bold', color: 'var(--primary-color)' }} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* --- EXISTING CLIENT MODE --- */}
+                {arAddMode === 'existing' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '16px', padding: '10px', backgroundColor: 'var(--panel-bg)', borderRadius: '6px', borderLeft: '3px solid var(--accent-yellow)' }}>
+                      Select a client you have previously registered and fill in their CAC details to enable annual returns tracking.
+                    </div>
+
+                    {/* Client Search */}
+                    <div className="form-group">
+                      <label>Search Clients</label>
+                      <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}><IconSearch /></span>
+                        <input
+                          type="text"
+                          id="ar-existing-search"
+                          value={arClientSearch}
+                          onChange={(e) => { setArClientSearch(e.target.value); setArExistingClientId(''); }}
+                          placeholder="Search by name or phone..."
+                          style={{ paddingLeft: '36px' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Client List */}
+                    {!arExistingClientId && (
+                      <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '16px' }}>
+                        {filteredUnreg.length === 0 ? (
+                          <p style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                            {unregisteredClients.length === 0 ? 'All your clients already have registration details.' : 'No clients match your search.'}
+                          </p>
+                        ) : (
+                          filteredUnreg.map(c => (
+                            <div
+                              key={c.id}
+                              onClick={() => { setArExistingClientId(c.id); setArClientSearch(c.name); }}
+                              style={{
+                                padding: '12px 16px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                borderBottom: '1px solid var(--border-color)', transition: 'background 0.15s'
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--panel-bg)'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <div>
+                                <strong style={{ fontSize: '0.9rem' }}>{c.name}</strong>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone || 'No phone'}</div>
+                              </div>
+                              <span style={{ fontSize: '0.75rem', padding: '3px 8px', backgroundColor: 'rgba(245,158,11,0.1)', color: 'var(--accent-yellow)', borderRadius: '12px', fontWeight: '600' }}>No registration</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {/* Selected Client Confirmation */}
+                    {arExistingClientId && selectedExistingClient && (
+                      <div style={{ padding: '12px 16px', backgroundColor: 'rgba(16,185,129,0.07)', border: '1px solid var(--primary-color)', borderRadius: '8px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <strong>{selectedExistingClient.name}</strong>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{selectedExistingClient.phone}</div>
+                        </div>
+                        <button type="button" onClick={() => { setArExistingClientId(''); setArClientSearch(''); setArExistingRegDetails({ registration_type: '', registration_date: '', annual_returns_due_date: '' }); }} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold' }}>✕</button>
+                      </div>
+                    )}
+
+                    {/* Registration Details for selected existing client */}
+                    {arExistingClientId && (
+                      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                        <div className="form-group">
+                          <label>CAC Registration Type *</label>
+                          <select id="ar-existing-type" required value={arExistingRegDetails.registration_type} onChange={(e) => handleARExistingRegTypeChange(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)' }}>
+                            <option value="">Select registration type...</option>
+                            <option value="Business Name">Business Name</option>
+                            <option value="NGO">NGO</option>
+                            <option value="Limited Company">Limited Company</option>
+                          </select>
+                        </div>
+                        {arExistingRegDetails.registration_type && (
+                          <div className="form-row">
+                            <div className="form-group">
+                              <label>CAC Registration Date *</label>
+                              <input type="date" id="ar-existing-regdate" required value={arExistingRegDetails.registration_date} onChange={(e) => handleARExistingRegDateChange(e.target.value)} />
+                            </div>
+                            <div className="form-group">
+                              <label>First Returns Due Date (auto-calculated)</label>
+                              <input type="date" disabled value={arExistingRegDetails.annual_returns_due_date} style={{ backgroundColor: 'var(--panel-bg)', fontWeight: 'bold', color: 'var(--primary-color)' }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => { setIsARAddCompanyOpen(false); setArClientSearch(''); setArExistingClientId(''); setArExistingRegDetails({ registration_type: '', registration_date: '', annual_returns_due_date: '' }); }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" id="ar-add-company-submit">
+                  {arAddMode === 'new' ? '🏢 Register & Add to Tracker' : '✅ Save Registration Details'}
+                </button>
+              </div>
+            </form>
+          </div>
+        );
+      })()}
 
       {/* --- POPUP MODAL: MARK ANNUAL RETURNS AS DONE --- */}
       {isARSyncModalOpen && arSyncClient && (
