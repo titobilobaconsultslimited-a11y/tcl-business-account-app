@@ -3496,34 +3496,34 @@ export default function Home() {
                                     </thead>
                                     <tbody>
                                       <tr><td className="font-bold">Gross Service Revenue</td><td className="text-right font-bold"></td></tr>
-                                      <tr><td style={{ paddingLeft: '24px' }}>Client Professional Service Fees</td><td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
-                                      <tr className="subtotal-row"><td>Gross Service Revenues</td><td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
+                                      <tr><td style={{ paddingLeft: '24px' }}>Client Professional Service Fees</td><td className="text-right text-green">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
+                                      <tr className="subtotal-row"><td>Gross Service Revenues</td><td className="text-right text-green">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
                                       
                                       <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Direct Operations Cost</td><td className="text-right font-bold"></td></tr>
-                                      <tr><td style={{ paddingLeft: '24px' }}>Registry Statutory filing & stamp duties</td><td className="text-right">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
-                                      <tr className="subtotal-row"><td>Total Cost of Sales</td><td className="text-right">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
+                                      <tr><td style={{ paddingLeft: '24px' }}>Registry Statutory filing & stamp duties</td><td className="text-right text-red">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
+                                      <tr className="subtotal-row"><td>Total Cost of Sales</td><td className="text-right text-red">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
                                       
                                       <tr className="subtotal-row" style={{ backgroundColor: '#F8FAFC' }}>
                                         <td className="font-bold">GROSS TRADING PROFIT</td>
-                                        <td className="text-right font-bold">{formatMoney(robustData.profitAndLoss.grossProfit)}</td>
+                                        <td className="text-right font-bold text-green">{formatMoney(robustData.profitAndLoss.grossProfit)}</td>
                                       </tr>
                                       
                                       <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Operating Expenses (OPEX)</td><td className="text-right font-bold"></td></tr>
                                       {robustData.profitAndLoss.opex.map(e => (
                                         <tr key={e.category}>
                                           <td style={{ paddingLeft: '24px' }}>{e.category}</td>
-                                          <td className="text-right">{formatMoney(e.amount)}</td>
+                                          <td className="text-right text-red">{formatMoney(e.amount)}</td>
                                         </tr>
                                       ))}
                                       <tr>
                                         <td style={{ paddingLeft: '24px' }}>Depreciation Charge (Non-Current assets)</td>
-                                        <td className="text-right">{formatMoney(robustData.profitAndLoss.depreciation)}</td>
+                                        <td className="text-right text-red">{formatMoney(robustData.profitAndLoss.depreciation)}</td>
                                       </tr>
-                                      <tr className="subtotal-row"><td>Total Operating Expenses</td><td className="text-right">({formatMoney(robustData.profitAndLoss.totalExpenses)})</td></tr>
+                                      <tr className="subtotal-row"><td>Total Operating Expenses</td><td className="text-right text-red">({formatMoney(robustData.profitAndLoss.totalExpenses)})</td></tr>
                                       
                                       <tr className="total-row">
                                         <td className="font-bold">NET RETAINED PROFIT / (LOSS) PRE-TAX</td>
-                                        <td className="text-right font-bold" style={{ color: robustData.profitAndLoss.netProfit >= 0 ? '#059669' : '#DC2626' }}>
+                                        <td className={`text-right font-bold ${robustData.profitAndLoss.netProfit >= 0 ? 'text-green' : 'text-red'}`}>
                                           {formatMoney(robustData.profitAndLoss.netProfit)}
                                         </td>
                                       </tr>
@@ -4046,34 +4046,34 @@ export default function Home() {
                           </thead>
                           <tbody>
                             <tr><td className="font-bold">Gross Service Revenue</td><td className="text-right font-bold"></td></tr>
-                            <tr><td style={{ paddingLeft: '24px' }}>Client Professional Service Fees</td><td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
-                            <tr className="subtotal-row"><td>Gross Service Revenues</td><td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
+                            <tr><td style={{ paddingLeft: '24px' }}>Client Professional Service Fees</td><td className="text-right text-green">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
+                            <tr className="subtotal-row"><td>Gross Service Revenues</td><td className="text-right text-green">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
                             
                             <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Direct Operations Cost</td><td className="text-right font-bold"></td></tr>
-                            <tr><td style={{ paddingLeft: '24px' }}>Registry Statutory filing & stamp duties</td><td className="text-right">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
-                            <tr className="subtotal-row"><td>Total Cost of Sales</td><td className="text-right">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
+                            <tr><td style={{ paddingLeft: '24px' }}>Registry Statutory filing & stamp duties</td><td className="text-right text-red">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
+                            <tr className="subtotal-row"><td>Total Cost of Sales</td><td className="text-right text-red">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
                             
                             <tr className="subtotal-row" style={{ backgroundColor: '#F8FAFC' }}>
                               <td className="font-bold">GROSS TRADING PROFIT</td>
-                              <td className="text-right font-bold">{formatMoney(robustData.profitAndLoss.grossProfit)}</td>
+                              <td className="text-right font-bold text-green">{formatMoney(robustData.profitAndLoss.grossProfit)}</td>
                             </tr>
                             
                             <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Operating Expenses (OPEX)</td><td className="text-right font-bold"></td></tr>
                             {robustData.profitAndLoss.opex.map(e => (
                               <tr key={e.category}>
                                 <td style={{ paddingLeft: '24px' }}>{e.category}</td>
-                                <td className="text-right">{formatMoney(e.amount)}</td>
+                                <td className="text-right text-red">{formatMoney(e.amount)}</td>
                               </tr>
                             ))}
                             <tr>
                               <td style={{ paddingLeft: '24px' }}>Depreciation Charge (Non-Current assets)</td>
-                              <td className="text-right">{formatMoney(robustData.profitAndLoss.depreciation)}</td>
+                              <td className="text-right text-red">{formatMoney(robustData.profitAndLoss.depreciation)}</td>
                             </tr>
-                            <tr className="subtotal-row"><td>Total Operating Expenses</td><td className="text-right">({formatMoney(robustData.profitAndLoss.totalExpenses)})</td></tr>
+                            <tr className="subtotal-row"><td>Total Operating Expenses</td><td className="text-right text-red">({formatMoney(robustData.profitAndLoss.totalExpenses)})</td></tr>
                             
                             <tr className="total-row">
                               <td className="font-bold">NET RETAINED PROFIT / (LOSS) PRE-TAX</td>
-                              <td className="text-right font-bold" style={{ color: robustData.profitAndLoss.netProfit >= 0 ? '#059669' : '#DC2626' }}>
+                              <td className={`text-right font-bold ${robustData.profitAndLoss.netProfit >= 0 ? 'text-green' : 'text-red'}`}>
                                 {formatMoney(robustData.profitAndLoss.netProfit)}
                               </td>
                             </tr>

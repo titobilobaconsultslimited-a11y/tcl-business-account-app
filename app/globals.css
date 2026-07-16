@@ -1443,8 +1443,8 @@ tr:hover td {
 }
 
 .statement-paper {
-  background-color: #FFFFFF;
-  color: #0F172A;
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
   padding: 40px;
   border-radius: var(--border-radius-sm);
   border: 1px solid #E2E8F0;
@@ -1452,16 +1452,23 @@ tr:hover td {
   min-height: 800px;
 }
 
-[data-theme="dark"] .statement-paper {
-  /* Retain standard paper-white look for printing professional business financial reports */
-  background-color: #FFFFFF;
-  color: #0F172A;
+/* Force standard paper styling for print/screen even inside dark mode */
+.statement-paper, 
+.statement-paper div, 
+.statement-paper p, 
+.statement-paper strong, 
+.statement-paper span, 
+.statement-paper table, 
+.statement-paper tr, 
+.statement-paper td {
+  color: #0F172A !important;
 }
 
+/* Form headers and titles */
 .statement-header-title {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #059669;
+  color: #059669 !important;
   letter-spacing: -0.5px;
   text-transform: uppercase;
   margin-bottom: 4px;
@@ -1471,7 +1478,7 @@ tr:hover td {
 
 .statement-subtitle {
   font-size: 0.875rem;
-  color: #475569;
+  color: #475569 !important;
   font-weight: 500;
   margin-bottom: 24px;
 }
@@ -1483,18 +1490,21 @@ tr:hover td {
   font-size: 0.9rem;
 }
 
-.statement-table th {
+/* Clear formal table headers without dark panel background overrides */
+.statement-table th, 
+.statement-paper table th {
   text-align: left;
   padding: 10px 12px;
-  border-bottom: 2px solid #94A3B8;
-  color: #1E293B;
+  background-color: #F8FAFC !important;
+  border-bottom: 2px solid #0F172A !important;
+  color: #0F172A !important;
   font-weight: 700;
 }
 
 .statement-table td {
   padding: 8px 12px;
   border-bottom: 1px solid #E2E8F0;
-  color: #334155;
+  color: #334155 !important;
   vertical-align: top;
 }
 
@@ -1502,13 +1512,37 @@ tr:hover td {
   font-weight: 700;
   border-top: 1px solid #0F172A;
   border-bottom: 3px double #0F172A;
-  color: #0F172A;
+  color: #0F172A !important;
 }
 
 .statement-table tr.subtotal-row td {
   font-weight: 700;
   border-top: 1px solid #475569;
   border-bottom: 1px solid #475569;
+  color: #0F172A !important;
+}
+
+/* Color overrides with !important to bypass global theme inheritance */
+.statement-paper .text-green,
+.statement-paper td.text-green,
+.statement-paper tr.text-green td,
+.statement-paper span.text-green,
+.statement-paper strong.text-green {
+  color: #059669 !important;
+}
+
+.statement-paper .text-red,
+.statement-paper td.text-red,
+.statement-paper tr.text-red td,
+.statement-paper span.text-red,
+.statement-paper strong.text-red {
+  color: #DC2626 !important;
+}
+
+.statement-paper .text-black,
+.statement-paper td.text-black,
+.statement-paper tr.text-black td {
+  color: #0F172A !important;
 }
 
 .text-right {
