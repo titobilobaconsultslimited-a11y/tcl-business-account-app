@@ -102,6 +102,15 @@ export default function Home() {
   const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [reportMonth, setReportMonth] = useState(currentMonthStr);
 
+  // Robust Financial Statements State
+  const [reportType, setReportType] = useState('monthly'); // 'monthly' | 'robust'
+  const [robustPeriod, setRobustPeriod] = useState('2024'); // '2024' | '2025' | 'custom'
+  const [robustStart, setRobustStart] = useState('2024-01-01');
+  const [robustEnd, setRobustEnd] = useState('2024-12-31');
+  const [robustSubTab, setRobustSubTab] = useState('pl'); // 'pl', 'bs', 'cf', 'notes', 'fa', 'dep', 'tb', 'gl', 'coa', 'wp'
+  const [robustData, setRobustData] = useState(null);
+  const [robustLoading, setRobustLoading] = useState(false);
+
   // Invoice Edit Payment Modal State
   const [isEditPaymentModalOpen, setIsEditPaymentModalOpen] = useState(false);
   const [editPaymentInvoice, setEditPaymentInvoice] = useState(null);
@@ -217,6 +226,36 @@ export default function Home() {
     setSelectedClientIds([]);
     setSelectedServiceIds([]);
   }, [activeTab]);
+
+  const fetchRobustStatements = async () => {
+    try {
+      setRobustLoading(true);
+      let url = '/api/financial-statements?';
+      if (robustPeriod === 'custom') {
+        url += `startDate=${robustStart}&endDate=${robustEnd}`;
+      } else {
+        url += `year=${robustPeriod}`;
+      }
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.error) {
+        alert('Error generating reports: ' + data.error);
+      } else {
+        setRobustData(data);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error fetching financial statements.');
+    } finally {
+      setRobustLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (reportType === 'robust') {
+      fetchRobustStatements();
+    }
+  }, [reportType, robustPeriod, robustStart, robustEnd]);
 
   // RENDER CHARTS
   useEffect(() => {
@@ -3120,155 +3159,1150 @@ export default function Home() {
               {/* TAB 5: MONTHLY REPORTS */}
               {activeTab === 'reports' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  <div className="table-card" style={{ padding: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label>Select Calendar Month</label>
-                        <input 
-                          type="month" 
-                          value={reportMonth} 
-                          onChange={(e) => setReportMonth(e.target.value)} 
-                          style={{ maxWidth: '240px' }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '24px', flexWrap: 'wrap' }}>
-                        <button className="btn btn-primary" onClick={() => downloadPdf('monthly-report-print', `TCL-Business-Performance-Report-${reportMonth}.pdf`)}>
-                          <IconDownload /> Download PDF Report
-                        </button>
-                        <button className="btn btn-secondary" onClick={() => triggerEmailModal(
-                          'monthly-report-print',
-                          `TCL-Report-${reportMonth}.pdf`,
-                          settings.senderEmail || '',
-                          'Report'
-                        )}>
-                          <IconMail /> Email Report
-                        </button>
-                      </div>
+                  {/* Toggle Report Type */}
+                  <div className="report-filter-bar" style={{ padding: '16px' }}>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button 
+                        className={`btn ${reportType === 'monthly' ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => setReportType('monthly')}
+                      >
+                        Monthly Business Performance
+                      </button>
+                      <button 
+                        className={`btn ${reportType === 'robust' ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => setReportType('robust')}
+                      >
+                        Robust Business Financial Pack
+                      </button>
                     </div>
                   </div>
 
-                  {/* PRINT PERFORMANCE REPORT TEMPLATE */}
-                  <div className="table-card" style={{ padding: '40px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0' }}>
-                    <div id="monthly-report-print" className="report-print-layout">
-                      <div className="report-title-section" style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'center', marginBottom: '24px' }}>
-                        <img src="/logo.jpeg" alt="TCL Logo" style={{ width: '72px', height: '72px', borderRadius: '4px', objectFit: 'cover' }} />
-                        <div>
-                          <h1 style={{ color: '#059669', fontSize: '1.75rem', fontWeight: '800', margin: 0 }}>{settings.companyName || 'Titobiloba Consults Limited'}</h1>
-                          <p style={{ fontSize: '0.85rem', color: '#64748B', margin: '4px 0 0 0' }}>
-                            {settings.companyAddress || '78, Aina Road, Agiliti, Mile 12, Kosofe, Lagos State, Nigeria.'} | Phone: {settings.companyPhone || '2347012660971'}
+                  {reportType === 'monthly' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div className="table-card" style={{ padding: '24px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>Select Calendar Month</label>
+                            <input 
+                              type="month" 
+                              value={reportMonth} 
+                              onChange={(e) => setReportMonth(e.target.value)} 
+                              style={{ maxWidth: '240px' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '24px', flexWrap: 'wrap' }}>
+                            <button className="btn btn-primary" onClick={() => downloadPdf('monthly-report-print', `TCL-Business-Performance-Report-${reportMonth}.pdf`)}>
+                              <IconDownload /> Download PDF Report
+                            </button>
+                            <button className="btn btn-secondary" onClick={() => triggerEmailModal(
+                              'monthly-report-print',
+                              `TCL-Report-${reportMonth}.pdf`,
+                              settings.senderEmail || '',
+                              'Report'
+                            )}>
+                              <IconMail /> Email Report
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* PRINT PERFORMANCE REPORT TEMPLATE */}
+                      <div className="table-card" style={{ padding: '40px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0' }}>
+                        <div id="monthly-report-print" className="report-print-layout">
+                          <div className="report-title-section" style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'center', marginBottom: '24px' }}>
+                            <img src="/logo.jpeg" alt="TCL Logo" style={{ width: '72px', height: '72px', borderRadius: '4px', objectFit: 'cover' }} />
+                            <div>
+                              <h1 style={{ color: '#059669', fontSize: '1.75rem', fontWeight: '800', margin: 0 }}>{settings.companyName || 'Titobiloba Consults Limited'}</h1>
+                              <p style={{ fontSize: '0.85rem', color: '#64748B', margin: '4px 0 0 0' }}>
+                                {settings.companyAddress || '78, Aina Road, Agiliti, Mile 12, Kosofe, Lagos State, Nigeria.'} | Phone: {settings.companyPhone || '2347012660971'}
+                              </p>
+                            </div>
+                          </div>
+                          <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginTop: '12px', letterSpacing: '-0.5px' }}>
+                            MONTHLY BUSINESS PERFORMANCE REPORT
+                          </h2>
+                          <strong style={{ color: '#059669', fontSize: '1rem' }}>{reportData.monthName} {reportData.year}</strong>
+
+                          <div className="report-grid-summary">
+                            <div className="report-summary-box">
+                              <h4 style={{color: '#64748B'}}>Total Monthly Revenue</h4>
+                              <p style={{ color: '#059669' }}>{formatMoney(reportData.revenue)}</p>
+                            </div>
+                            <div className="report-summary-box">
+                              <h4 style={{color: '#64748B'}}>Total Monthly Expenses</h4>
+                              <p style={{ color: '#DC2626' }}>{formatMoney(reportData.expenses)}</p>
+                            </div>
+                            <div className="report-summary-box">
+                              <h4 style={{color: '#64748B'}}>Net Operational Profit</h4>
+                              <p style={{ color: reportData.profit >= 0 ? '#059669' : '#DC2626' }}>{formatMoney(reportData.profit)}</p>
+                            </div>
+                          </div>
+
+                          <div className="report-section-title">Income Statement Summary</div>
+                          <table className="print-table" style={{ fontSize: '0.85rem' }}>
+                            <thead>
+                              <tr>
+                                <th>Revenue Source / Service rendered</th>
+                                <th style={{ textAlign: 'right' }}>Month Total (NGN)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {reportData.services.length > 0 ? (
+                                reportData.services.map(([name, val]) => (
+                                  <tr key={name}>
+                                    <td>{name}</td>
+                                    <td style={{ textAlign: 'right', fontWeight: '600' }}>{formatMoney(val)}</td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan="2" style={{ textAlign: 'center', color: '#94A3B8' }}>No revenue recorded in this month.</td>
+                                </tr>
+                              )}
+                              <tr style={{ fontWeight: '750', backgroundColor: '#F8FAFC' }}>
+                                <td>GROSS OPERATING REVENUE</td>
+                                <td style={{ textAlign: 'right', color: '#059669' }}>{formatMoney(reportData.revenue)}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+
+                          <div className="report-section-title">Operational Expense Ledger</div>
+                          <table className="print-table" style={{ fontSize: '0.85rem' }}>
+                            <thead>
+                              <tr>
+                                <th>Expense Category</th>
+                                <th style={{ textAlign: 'right' }}>Month Total (NGN)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {reportData.expensesCats.length > 0 ? (
+                                reportData.expensesCats.map(([name, val]) => (
+                                  <tr key={name}>
+                                    <td>{name}</td>
+                                    <td style={{ textAlign: 'right', fontWeight: '600', color: '#DC2626' }}>{formatMoney(val)}</td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan="2" style={{ textAlign: 'center', color: '#94A3B8' }}>No expenses logged in this month.</td>
+                                </tr>
+                              )}
+                              <tr style={{ fontWeight: '750', backgroundColor: '#F8FAFC' }}>
+                                <td>TOTAL OPERATIONAL EXPENSES</td>
+                                <td style={{ textAlign: 'right', color: '#DC2626' }}>{formatMoney(reportData.expenses)}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+
+                          <div className="report-section-title">Cash Flow & Outstanding Position</div>
+                          <table className="print-table" style={{ fontSize: '0.85rem' }}>
+                            <tbody>
+                              <tr>
+                                <td>Net Earnings (Pre-Tax profit margin: {reportData.revenue > 0 ? ((reportData.profit / reportData.revenue) * 100).toFixed(0) : 0}%)</td>
+                                <td style={{ textAlign: 'right', fontWeight: '700' }}>{formatMoney(reportData.profit)}</td>
+                              </tr>
+                              <tr>
+                                <td>Invoices generated this Month</td>
+                                <td style={{ textAlign: 'right' }}>{reportData.invoicesCount} Invoices</td>
+                              </tr>
+                              <tr style={{ fontWeight: '650' }}>
+                                <td>Uncollected revenue outstanding from this month</td>
+                                <td style={{ textAlign: 'right', color: '#D97706' }}>{formatMoney(reportData.outstanding)}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+
+                          <div style={{ marginTop: '50px', fontSize: '0.8rem', color: '#64748B', borderTop: '1px solid #E2E8F0', paddingTop: '20px' }}>
+                            <p><strong>Verification Endorsement:</strong></p>
+                            <p style={{ marginTop: '4px' }}>This performance report details actual accounting records maintained locally or securely synced. It is compiled to meet the standards required for small business grants, bank loans, and audit validation.</p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px' }}>
+                              <div>
+                                <div style={{ width: '150px', borderBottom: '1px solid #000', height: '30px' }}></div>
+                                <p style={{ marginTop: '4px' }}>Titobiloba Consults Finance Office</p>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <p>Date Generated: {new Date().toISOString().split('T')[0]}</p>
+                                <p>System Hash: TCL-{reportMonth}-{Date.now().toString(36).substring(4, 9).toUpperCase()}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ROBUST FINANCIAL REPORTS VIEW */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div className="report-filter-bar">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>Report Period</label>
+                            <select 
+                              value={robustPeriod} 
+                              onChange={(e) => setRobustPeriod(e.target.value)}
+                              style={{ minWidth: '180px' }}
+                            >
+                              <option value="2024">Year 2024</option>
+                              <option value="2025">Year 2025</option>
+                              <option value="custom">Custom Date Range</option>
+                            </select>
+                          </div>
+                          {robustPeriod === 'custom' && (
+                            <>
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label>Start Date</label>
+                                <input type="date" value={robustStart} onChange={(e) => setRobustStart(e.target.value)} />
+                              </div>
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label>End Date</label>
+                                <input type="date" value={robustEnd} onChange={(e) => setRobustEnd(e.target.value)} />
+                              </div>
+                            </>
+                          )}
+                          <button className="btn btn-primary" onClick={fetchRobustStatements} style={{ marginTop: '24px' }}>
+                            Generate Statement
+                          </button>
+                        </div>
+                        
+                        {robustData && (
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button className="btn btn-primary" onClick={() => downloadPdf('robust-financial-pack-print', `TCL-Business-Financial-Statements-${robustPeriod}.pdf`)}>
+                              <IconDownload /> Download Complete Statement Pack
+                            </button>
+                            <button className="btn btn-secondary" onClick={() => triggerEmailModal(
+                              'robust-financial-pack-print',
+                              `TCL-Financial-Statements-${robustPeriod}.pdf`,
+                              settings.senderEmail || '',
+                              'Financial Statements Pack'
+                            )}>
+                              <IconMail /> Email Statement Pack
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {robustLoading ? (
+                        <div className="table-card" style={{ padding: '60px', textAlign: 'center', color: 'var(--primary-color)', fontWeight: '600' }}>
+                          <div className="spinner" style={{ margin: '0 auto 16px auto' }}></div>
+                          Calculating robust ledger records, depreciation schedules, and trial balances...
+                        </div>
+                      ) : !robustData ? (
+                        <div className="table-card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                          Select a period above and click "Generate Statement" to load reporting schedules.
+                        </div>
+                      ) : (
+                        <div className="statement-layout">
+                          {/* Sidebar Selector */}
+                          <div className="statement-sidebar">
+                            <strong style={{ fontSize: '0.75rem', color: 'var(--text-muted)', paddingLeft: '14px', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Primary Statements</strong>
+                            <button className={`statement-sidebar-item ${robustSubTab === 'pl' ? 'active' : ''}`} onClick={() => setRobustSubTab('pl')}>
+                              1. Profit & Loss Statement
+                            </button>
+                            <button className={`statement-sidebar-item ${robustSubTab === 'bs' ? 'active' : ''}`} onClick={() => setRobustSubTab('bs')}>
+                              2. Financial Position (Balance Sheet)
+                            </button>
+                            <button className={`statement-sidebar-item ${robustSubTab === 'cf' ? 'active' : ''}`} onClick={() => setRobustSubTab('cf')}>
+                              3. Cash Flow Statement
+                            </button>
+                            <button className={`statement-sidebar-item ${robustSubTab === 'notes' ? 'active' : ''}`} onClick={() => setRobustSubTab('notes')}>
+                              4. Notes to Financial Statements
+                            </button>
+                            
+                            <strong style={{ fontSize: '0.75rem', color: 'var(--text-muted)', paddingLeft: '14px', textTransform: 'uppercase', margin: '14px 0 8px 0', display: 'block' }}>Asset & Valuation Schedules</strong>
+                            <button className={`statement-sidebar-item ${robustSubTab === 'fa' ? 'active' : ''}`} onClick={() => setRobustSubTab('fa')}>
+                              5. Fixed Asset Schedule
+                            </button>
+                            <button className={`statement-sidebar-item ${robustSubTab === 'dep' ? 'active' : ''}`} onClick={() => setRobustSubTab('dep')}>
+                              6. Depreciation Schedule
+                            </button>
+                            
+                            <strong style={{ fontSize: '0.75rem', color: 'var(--text-muted)', paddingLeft: '14px', textTransform: 'uppercase', margin: '14px 0 8px 0', display: 'block' }}>Accountant Working Records</strong>
+                            <button className={`statement-sidebar-item ${robustSubTab === 'tb' ? 'active' : ''}`} onClick={() => setRobustSubTab('tb')}>
+                              7. Trial Balance
+                            </button>
+                            <button className={`statement-sidebar-item ${robustSubTab === 'gl' ? 'active' : ''}`} onClick={() => setRobustSubTab('gl')}>
+                              8. General Ledger Accounts
+                            </button>
+                            <button className={`statement-sidebar-item ${robustSubTab === 'coa' ? 'active' : ''}`} onClick={() => setRobustSubTab('coa')}>
+                              9. Chart of Accounts Index
+                            </button>
+                            <button className={`statement-sidebar-item ${robustSubTab === 'wp' ? 'active' : ''}`} onClick={() => setRobustSubTab('wp')}>
+                              10. Accountant's Working Papers
+                            </button>
+                          </div>
+
+                          {/* Render selected statement view in white-paper formal design */}
+                          <div className="statement-content-area" style={{ backgroundColor: '#131B2A' }}>
+                            <div className="statement-paper">
+                              {/* Corporate Header */}
+                              <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'center', marginBottom: '24px' }}>
+                                <img src="/logo.jpeg" alt="TCL Logo" style={{ width: '64px', height: '64px', borderRadius: '4px', objectFit: 'cover' }} />
+                                <div>
+                                  <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0F172A', margin: 0 }}>{settings.companyName || 'Titobiloba Consults Limited'}</h2>
+                                  <p style={{ fontSize: '0.75rem', color: '#475569', margin: '2px 0 0 0' }}>
+                                    {settings.companyAddress || '78, Aina Road, Agiliti, Mile 12, Kosofe, Lagos State, Nigeria.'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {robustSubTab === 'pl' && (
+                                <div>
+                                  <div className="statement-header-title">Statement of Profit or Loss</div>
+                                  <div className="statement-subtitle">For the Period: {robustData.periodName} (Reporting Currency: NGN)</div>
+                                  <table className="statement-table">
+                                    <thead>
+                                      <tr>
+                                        <th>Account / Narrative Description</th>
+                                        <th className="text-right">Balance (NGN)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <tr><td className="font-bold">Gross Service Revenue</td><td className="text-right font-bold"></td></tr>
+                                      <tr><td style={{ paddingLeft: '24px' }}>Client Professional Service Fees</td><td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
+                                      <tr className="subtotal-row"><td>Gross Service Revenues</td><td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
+                                      
+                                      <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Direct Operations Cost</td><td className="text-right font-bold"></td></tr>
+                                      <tr><td style={{ paddingLeft: '24px' }}>Registry Statutory filing & stamp duties</td><td className="text-right">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
+                                      <tr className="subtotal-row"><td>Total Cost of Sales</td><td className="text-right">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
+                                      
+                                      <tr className="subtotal-row" style={{ backgroundColor: '#F8FAFC' }}>
+                                        <td className="font-bold">GROSS TRADING PROFIT</td>
+                                        <td className="text-right font-bold">{formatMoney(robustData.profitAndLoss.grossProfit)}</td>
+                                      </tr>
+                                      
+                                      <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Operating Expenses (OPEX)</td><td className="text-right font-bold"></td></tr>
+                                      {robustData.profitAndLoss.opex.map(e => (
+                                        <tr key={e.category}>
+                                          <td style={{ paddingLeft: '24px' }}>{e.category}</td>
+                                          <td className="text-right">{formatMoney(e.amount)}</td>
+                                        </tr>
+                                      ))}
+                                      <tr>
+                                        <td style={{ paddingLeft: '24px' }}>Depreciation Charge (Non-Current assets)</td>
+                                        <td className="text-right">{formatMoney(robustData.profitAndLoss.depreciation)}</td>
+                                      </tr>
+                                      <tr className="subtotal-row"><td>Total Operating Expenses</td><td className="text-right">({formatMoney(robustData.profitAndLoss.totalExpenses)})</td></tr>
+                                      
+                                      <tr className="total-row">
+                                        <td className="font-bold">NET RETAINED PROFIT / (LOSS) PRE-TAX</td>
+                                        <td className="text-right font-bold" style={{ color: robustData.profitAndLoss.netProfit >= 0 ? '#059669' : '#DC2626' }}>
+                                          {formatMoney(robustData.profitAndLoss.netProfit)}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+
+                              {robustSubTab === 'bs' && (
+                                <div>
+                                  <div className="statement-header-title">Statement of Financial Position</div>
+                                  <div className="statement-subtitle">As at Date: {robustData.endDate} (Reporting Currency: NGN)</div>
+                                  <table className="statement-table">
+                                    <thead>
+                                      <tr>
+                                        <th>Asset Class / Capital Liability Description</th>
+                                        <th className="text-right">Cost (NGN)</th>
+                                        <th className="text-right">Depreciation</th>
+                                        <th className="text-right">Net Value (NGN)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <tr><td className="font-bold" colSpan="4">Non-Current Assets</td></tr>
+                                      <tr>
+                                        <td style={{ paddingLeft: '24px' }}>Property, Plant, and Equipment (Schedule 5)</td>
+                                        <td className="text-right">{formatMoney(robustData.balanceSheet.fixedAssetsCost)}</td>
+                                        <td className="text-right">({formatMoney(robustData.balanceSheet.accumulatedDepreciation)})</td>
+                                        <td className="text-right font-bold">{formatMoney(robustData.balanceSheet.nbv)}</td>
+                                      </tr>
+                                      <tr className="subtotal-row">
+                                        <td colSpan="3">Total Non-Current Assets</td>
+                                        <td className="text-right">{formatMoney(robustData.balanceSheet.nbv)}</td>
+                                      </tr>
+
+                                      <tr><td className="font-bold" style={{ paddingTop: '16px' }} colSpan="4">Current Assets</td></tr>
+                                      <tr>
+                                        <td style={{ paddingLeft: '24px' }} colSpan="3">Cash and Cash Equivalents (Sterling/Access bank)</td>
+                                        <td className="text-right">{formatMoney(robustData.balanceSheet.cashAndBank)}</td>
+                                      </tr>
+                                      <tr className="subtotal-row">
+                                        <td colSpan="3">Total Current Assets</td>
+                                        <td className="text-right">{formatMoney(robustData.balanceSheet.cashAndBank)}</td>
+                                      </tr>
+
+                                      <tr className="total-row">
+                                        <td colSpan="3">TOTAL NET EMPLOYED ASSETS</td>
+                                        <td className="text-right font-bold">{formatMoney(robustData.balanceSheet.totalAssets)}</td>
+                                      </tr>
+
+                                      <tr><td className="font-bold" style={{ paddingTop: '24px' }} colSpan="4">Equity & Reserves</td></tr>
+                                      <tr>
+                                        <td style={{ paddingLeft: '24px' }} colSpan="3">Share Capital Seed</td>
+                                        <td className="text-right">{formatMoney(robustData.balanceSheet.shareCapital)}</td>
+                                      </tr>
+                                      <tr>
+                                        <td style={{ paddingLeft: '24px' }} colSpan="3">Retained Earnings Reserve</td>
+                                        <td className="text-right">{formatMoney(robustData.balanceSheet.retainedEarnings)}</td>
+                                      </tr>
+                                      <tr className="total-row">
+                                        <td colSpan="3">TOTAL SHAREHOLDERS EQUITY & CAPITAL FUNDS</td>
+                                        <td className="text-right font-bold">{formatMoney(robustData.balanceSheet.totalEquity)}</td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                  {robustData.balanceSheet.isBalanced ? (
+                                    <div style={{ color: '#059669', fontSize: '0.8rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
+                                      <IconCheck /> Balanced sheet successfully verified.
+                                    </div>
+                                  ) : (
+                                    <div style={{ color: '#DC2626', fontSize: '0.8rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
+                                      <IconAlert /> Audit alert: imbalance detected in net assets reconciliation.
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {robustSubTab === 'cf' && (
+                                <div>
+                                  <div className="statement-header-title">Statement of Cash Flows</div>
+                                  <div className="statement-subtitle">For the Period: {robustData.periodName} (Reporting Currency: NGN)</div>
+                                  <table className="statement-table">
+                                    <thead>
+                                      <tr>
+                                        <th>Cash Flow Activity Summary</th>
+                                        <th className="text-right">Balance (NGN)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <tr><td className="font-bold">Cash Flow from Operating Activities</td><td className="text-right"></td></tr>
+                                      <tr><td style={{ paddingLeft: '24px' }}>Net Operational Retained Profit</td><td className="text-right">{formatMoney(robustData.cashFlow.operating.netProfit)}</td></tr>
+                                      <tr><td style={{ paddingLeft: '24px' }}>Adjustment for Non-Cash Depreciation</td><td className="text-right">{formatMoney(robustData.cashFlow.operating.depreciation)}</td></tr>
+                                      <tr className="subtotal-row"><td>Net Cash Generated from Operations</td><td className="text-right">{formatMoney(robustData.cashFlow.operating.netOperating)}</td></tr>
+
+                                      <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Cash Flow from Investing Activities</td><td className="text-right"></td></tr>
+                                      <tr><td style={{ paddingLeft: '24px' }}>Acquisition of Fixed Assets (Capital Additions)</td><td className="text-right">{formatMoney(robustData.cashFlow.investing.purchaseOfAssets)}</td></tr>
+                                      <tr className="subtotal-row"><td>Net Cash Used in Investing Activities</td><td className="text-right">{formatMoney(robustData.cashFlow.investing.purchaseOfAssets)}</td></tr>
+
+                                      <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Cash Flow from Financing Activities</td><td className="text-right"></td></tr>
+                                      <tr><td style={{ paddingLeft: '24px' }}>Drawings / Capital Injections</td><td className="text-right">{formatMoney(robustData.cashFlow.financing.netFinancing)}</td></tr>
+                                      <tr className="subtotal-row"><td>Net Cash from Financing Activities</td><td className="text-right">{formatMoney(robustData.cashFlow.financing.netFinancing)}</td></tr>
+
+                                      <tr className="subtotal-row" style={{ backgroundColor: '#F8FAFC' }}>
+                                        <td className="font-bold" style={{ paddingTop: '16px' }}>NET CONSOLIDATED INCREASE IN CASH</td>
+                                        <td className="text-right font-bold">{formatMoney(robustData.cashFlow.netIncreaseInCash)}</td>
+                                      </tr>
+
+                                      <tr>
+                                        <td>Cash and bank equivalents at beginning of period</td>
+                                        <td className="text-right">{formatMoney(robustData.cashFlow.openingCash)}</td>
+                                      </tr>
+                                      <tr className="total-row">
+                                        <td>CASH AND BANK BALANCE AT END OF PERIOD</td>
+                                        <td className="text-right font-bold">{formatMoney(robustData.cashFlow.closingCash)}</td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+
+                              {robustSubTab === 'notes' && (
+                                <div>
+                                  <div className="statement-header-title">Notes to the Financial Statements</div>
+                                  <div className="statement-subtitle">SME Accounting Policy Disclosures (NGN)</div>
+                                  
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontSize: '0.85rem' }}>
+                                    <div>
+                                      <h4 style={{ fontWeight: '700', color: '#1E293B', marginBottom: '6px' }}>Note 1: Basis of Compilation & Significant Accounting Policies</h4>
+                                      <p style={{ color: '#475569', lineHeight: '1.5' }}>{robustData.notes.accountingPolicies}</p>
+                                    </div>
+
+                                    <div>
+                                      <h4 style={{ fontWeight: '700', color: '#1E293B', marginBottom: '6px' }}>Note 2: Gross Revenues Breakdown</h4>
+                                      <p style={{ color: '#475569', marginBottom: '8px' }}>{robustData.notes.revenueNote}</p>
+                                      <table className="statement-table" style={{ fontSize: '0.8rem' }}>
+                                        <thead>
+                                          <tr>
+                                            <th>Revenue Segment</th>
+                                            <th className="text-right">Total (NGN)</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          <tr>
+                                            <td>Corporate Affairs Registry & Allied Consulting Services</td>
+                                            <td className="text-right">{formatMoney(robustData.notes.revenueNote ? robustData.profitAndLoss.revenue : 0)}</td>
+                                          </tr>
+                                          <tr style={{ fontWeight: 'bold' }}>
+                                            <td>Total Revenues</td>
+                                            <td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+
+                                    <div>
+                                      <h4 style={{ fontWeight: '700', color: '#1E293B', marginBottom: '6px' }}>Note 3: Property, Plant, & Equipment Cost Reconcilement</h4>
+                                      <table className="statement-table" style={{ fontSize: '0.8rem' }}>
+                                        <tbody>
+                                          <tr>
+                                            <td>Opening Cost Balance</td>
+                                            <td className="text-right">{formatMoney(robustData.fixedAssetsSchedule.filter(a => a.isPrior).reduce((sum, a) => sum + a.cost, 0))}</td>
+                                          </tr>
+                                          <tr>
+                                            <td>Additions during the period</td>
+                                            <td className="text-right">{formatMoney(robustData.fixedAssetsSchedule.filter(a => a.isAddition).reduce((sum, a) => sum + a.cost, 0))}</td>
+                                          </tr>
+                                          <tr style={{ fontWeight: 'bold' }}>
+                                            <td>Closing Asset Cost</td>
+                                            <td className="text-right">{formatMoney(robustData.notes.fixedAssetsCost)}</td>
+                                          </tr>
+                                          <tr>
+                                            <td>Less Accumulated Depreciation reserve</td>
+                                            <td className="text-right" style={{ color: '#DC2626' }}>({formatMoney(robustData.notes.accumulatedDepreciation)})</td>
+                                          </tr>
+                                          <tr style={{ fontWeight: 'bold' }}>
+                                            <td>Net Book Value (NBV)</td>
+                                            <td className="text-right">{formatMoney(robustData.notes.fixedAssetsCost - robustData.notes.accumulatedDepreciation)}</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {robustSubTab === 'fa' && (
+                                <div>
+                                  <div className="statement-header-title">Fixed Asset Schedule</div>
+                                  <div className="statement-subtitle">Property, Plant, and Equipment Register (Cost Basis)</div>
+                                  <table className="statement-table" style={{ fontSize: '0.8rem' }}>
+                                    <thead>
+                                      <tr>
+                                        <th>Asset Description</th>
+                                        <th>Asset Class</th>
+                                        <th>Purchase Date</th>
+                                        <th className="text-right">Acquisition Cost (NGN)</th>
+                                        <th className="text-right">Accumulated Depreciation</th>
+                                        <th className="text-right">Net Book Value (NGN)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {robustData.fixedAssetsSchedule.length > 0 ? (
+                                        robustData.fixedAssetsSchedule.map(a => (
+                                          <tr key={a.id}>
+                                            <td>{a.name}</td>
+                                            <td>{a.class}</td>
+                                            <td>{a.purchaseDate}</td>
+                                            <td className="text-right">{formatMoney(a.cost)}</td>
+                                            <td className="text-right">({formatMoney(a.closingAccDep)})</td>
+                                            <td className="text-right font-bold">{formatMoney(a.nbv)}</td>
+                                          </tr>
+                                        ))
+                                      ) : (
+                                        <tr>
+                                          <td colSpan="6" style={{ textAlign: 'center', color: '#94A3B8' }}>No fixed assets owned or acquired in this period.</td>
+                                        </tr>
+                                      )}
+                                      <tr style={{ fontWeight: 'bold', backgroundColor: '#F8FAFC' }}>
+                                        <td colSpan="3">TOTAL CAPITAL ASSETS</td>
+                                        <td className="text-right">{formatMoney(robustData.balanceSheet.fixedAssetsCost)}</td>
+                                        <td className="text-right" style={{ color: '#DC2626' }}>({formatMoney(robustData.balanceSheet.accumulatedDepreciation)})</td>
+                                        <td className="text-right">{formatMoney(robustData.balanceSheet.nbv)}</td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+
+                              {robustSubTab === 'dep' && (
+                                <div>
+                                  <div className="statement-header-title">Depreciation Schedule</div>
+                                  <div className="statement-subtitle">Asset Depreciation & Valuations (Straight Line pro-rata)</div>
+                                  <table className="statement-table" style={{ fontSize: '0.8rem' }}>
+                                    <thead>
+                                      <tr>
+                                        <th>Asset Name</th>
+                                        <th className="text-right">Asset Cost</th>
+                                        <th className="text-right">Opening Acc. Dep</th>
+                                        <th className="text-right">Depreciation Rate</th>
+                                        <th className="text-right">Period Charge (NGN)</th>
+                                        <th className="text-right">Closing Acc. Dep</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {robustData.fixedAssetsSchedule.length > 0 ? (
+                                        robustData.fixedAssetsSchedule.map(a => (
+                                          <tr key={a.id}>
+                                            <td>{a.name}</td>
+                                            <td className="text-right">{formatMoney(a.cost)}</td>
+                                            <td className="text-right">{formatMoney(a.openingAccDep)}</td>
+                                            <td className="text-right">{(a.name.toUpperCase().includes('FURNITURE') ? 10 : 20)}%</td>
+                                            <td className="text-right font-bold" style={{ color: '#DC2626' }}>{formatMoney(a.currentDep)}</td>
+                                            <td className="text-right">{formatMoney(a.closingAccDep)}</td>
+                                          </tr>
+                                        ))
+                                      ) : (
+                                        <tr>
+                                          <td colSpan="6" style={{ textAlign: 'center', color: '#94A3B8' }}>No depreciation calculations required.</td>
+                                        </tr>
+                                      )}
+                                      <tr style={{ fontWeight: 'bold', backgroundColor: '#F8FAFC' }}>
+                                        <td>TOTAL VALUATION CHARGES</td>
+                                        <td className="text-right">{formatMoney(robustData.balanceSheet.fixedAssetsCost)}</td>
+                                        <td className="text-right">{formatMoney(robustData.fixedAssetsSchedule.reduce((sum, a) => sum + a.openingAccDep, 0))}</td>
+                                        <td className="text-right">-</td>
+                                        <td className="text-right" style={{ color: '#DC2626' }}>{formatMoney(robustData.profitAndLoss.depreciation)}</td>
+                                        <td className="text-right">{formatMoney(robustData.balanceSheet.accumulatedDepreciation)}</td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+
+                              {robustSubTab === 'tb' && (
+                                <div>
+                                  <div className="statement-header-title">Trial Balance</div>
+                                  <div className="statement-subtitle">As at Date: {robustData.endDate} (Double-Entry Verification)</div>
+                                  <table className="statement-table" style={{ fontSize: '0.8rem' }}>
+                                    <thead>
+                                      <tr>
+                                        <th>Account Code</th>
+                                        <th>Account Name</th>
+                                        <th className="text-right">Debit Balance (NGN)</th>
+                                        <th className="text-right">Credit Balance (NGN)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {robustData.trialBalance.map(row => (
+                                        <tr key={row.code}>
+                                          <td>{row.code}</td>
+                                          <td>{row.name}</td>
+                                          <td className="text-right">{row.debit > 0 ? formatMoney(row.debit) : '-'}</td>
+                                          <td className="text-right">{row.credit > 0 ? formatMoney(row.credit) : '-'}</td>
+                                        </tr>
+                                      ))}
+                                      {/* Revenue and Expense period totals */}
+                                      <tr>
+                                        <td>4010</td>
+                                        <td>Service Revenue (Revenue)</td>
+                                        <td className="text-right">-</td>
+                                        <td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td>
+                                      </tr>
+                                      <tr>
+                                        <td>5010</td>
+                                        <td>Direct Service Cost (Filing costs)</td>
+                                        <td className="text-right">{formatMoney(robustData.profitAndLoss.costOfSales)}</td>
+                                        <td className="text-right">-</td>
+                                      </tr>
+                                      {robustData.profitAndLoss.opex.map((e, idx) => (
+                                        <tr key={e.category}>
+                                          <td>{6010 + idx}</td>
+                                          <td>{e.category} (Expense)</td>
+                                          <td className="text-right">{formatMoney(e.amount)}</td>
+                                          <td className="text-right">-</td>
+                                        </tr>
+                                      ))}
+                                      {robustData.profitAndLoss.depreciation > 0 && (
+                                        <tr>
+                                          <td>6110</td>
+                                          <td>Depreciation Expense</td>
+                                          <td className="text-right">{formatMoney(robustData.profitAndLoss.depreciation)}</td>
+                                          <td className="text-right">-</td>
+                                        </tr>
+                                      )}
+                                      <tr style={{ fontWeight: 'bold', backgroundColor: '#F8FAFC' }}>
+                                        <td colSpan="2">TOTAL TRIAL BALANCE</td>
+                                        <td className="text-right">
+                                          {formatMoney(
+                                            robustData.trialBalance.reduce((sum, r) => sum + r.debit, 0) +
+                                            robustData.profitAndLoss.costOfSales + 
+                                            robustData.profitAndLoss.opex.reduce((sum, e) => sum + e.amount, 0) +
+                                            robustData.profitAndLoss.depreciation
+                                          )}
+                                        </td>
+                                        <td className="text-right">
+                                          {formatMoney(
+                                            robustData.trialBalance.reduce((sum, r) => sum + r.credit, 0) +
+                                            robustData.profitAndLoss.revenue
+                                          )}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+
+                              {robustSubTab === 'gl' && (
+                                <div>
+                                  <div className="statement-header-title">General Ledger</div>
+                                  <div className="statement-subtitle">Audit Transaction Ledger (Reporting Currency: NGN)</div>
+                                  
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxHeight: '550px', overflowY: 'auto' }}>
+                                    {robustData.generalLedger.map(acct => (
+                                      <div key={acct.code} style={{ border: '1px solid #E2E8F0', padding: '16px', borderRadius: '4px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #0F172A', paddingBottom: '6px', marginBottom: '8px' }}>
+                                          <span className="font-bold" style={{ color: '#0F172A' }}>{acct.code} - {acct.name}</span>
+                                          <span className="font-bold" style={{ color: '#059669' }}>Ending Balance: {formatMoney(acct.balance)}</span>
+                                        </div>
+                                        <table className="statement-table" style={{ fontSize: '0.75rem', marginBottom: 0 }}>
+                                          <thead>
+                                            <tr>
+                                              <th>Date</th>
+                                              <th>Description</th>
+                                              <th className="text-right">Debit (NGN)</th>
+                                              <th className="text-right">Credit (NGN)</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {acct.postings.map((p, idx) => (
+                                              <tr key={idx} className="ledger-posting-row">
+                                                <td>{p.date}</td>
+                                                <td>{p.description}</td>
+                                                <td className="text-right">{p.debit > 0 ? formatMoney(p.debit) : '-'}</td>
+                                                <td className="text-right">{p.credit > 0 ? formatMoney(p.credit) : '-'}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {robustSubTab === 'coa' && (
+                                <div>
+                                  <div className="statement-header-title">Chart of Accounts Index</div>
+                                  <div className="statement-subtitle">Corporate Financial Chart Accounts</div>
+                                  <table className="statement-table">
+                                    <thead>
+                                      <tr>
+                                        <th>Account Code</th>
+                                        <th>Account Name</th>
+                                        <th>Account Type</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {robustData.chartOfAccounts.map(row => (
+                                        <tr key={row.code}>
+                                          <td className="font-bold">{row.code}</td>
+                                          <td>{row.name}</td>
+                                          <td style={{ color: '#475569', fontWeight: '500' }}>{row.type}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+
+                              {robustSubTab === 'wp' && (
+                                <div>
+                                  <div className="statement-header-title">Accountant's Working Papers</div>
+                                  <div className="statement-subtitle">Bank Reconciliation and Adjusting Journals (NGN)</div>
+                                  
+                                  <h4 style={{ fontWeight: '700', color: '#1E293B', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>Bank Statement Reconciliation</h4>
+                                  <table className="statement-table" style={{ fontSize: '0.85rem' }}>
+                                    <tbody>
+                                      <tr>
+                                        <td>Cash Balance as per General Ledger</td>
+                                        <td className="text-right font-bold">{formatMoney(robustData.workingPapers.bankReconciliation.balanceAsPerLedger)}</td>
+                                      </tr>
+                                      <tr>
+                                        <td>Less: Unpresented payments (uncollected checks)</td>
+                                        <td className="text-right">({formatMoney(robustData.workingPapers.bankReconciliation.unpresentedCheques)})</td>
+                                      </tr>
+                                      <tr>
+                                        <td>Add: Uncredited deposit items</td>
+                                        <td className="text-right">{formatMoney(robustData.workingPapers.bankReconciliation.uncreditedDeposits)}</td>
+                                      </tr>
+                                      <tr style={{ fontWeight: 'bold', borderTop: '2px solid #0F172A', borderBottom: '3px double #0F172A' }}>
+                                        <td>Reconciled Balance as per Access Bank Statement</td>
+                                        <td className="text-right">{formatMoney(robustData.workingPapers.bankReconciliation.balanceAsPerStatement)}</td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+
+                                  <h4 style={{ fontWeight: '700', color: '#1E293B', marginTop: '24px', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>Adjusting Journal Entries</h4>
+                                  <table className="statement-table" style={{ fontSize: '0.8rem' }}>
+                                    <thead>
+                                      <tr>
+                                        <th>Date</th>
+                                        <th>Ledger Accounts</th>
+                                        <th className="text-right">Debit (NGN)</th>
+                                        <th className="text-right">Credit (NGN)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {robustData.workingPapers.adjustingEntries.map((j, idx) => (
+                                        <tr key={idx}>
+                                          <td>{j.date}</td>
+                                          <td>
+                                            <div className="font-bold">{j.debitAccount}</div>
+                                            <div style={{ paddingLeft: '24px', fontStyle: 'italic' }}>to {j.creditAccount}</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '2px' }}>({j.narration})</div>
+                                          </td>
+                                          <td className="text-right font-bold">{formatMoney(j.amount)}</td>
+                                          <td className="text-right font-bold" style={{ paddingTop: '20px' }}>{formatMoney(j.amount)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+
+                              {/* Signatures & Hash */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #E2E8F0', paddingTop: '20px', marginTop: '40px', fontSize: '0.75rem', color: '#64748B' }}>
+                                <div>
+                                  <div style={{ width: '120px', borderBottom: '1px solid #000', height: '24px' }}></div>
+                                  <p style={{ marginTop: '4px' }}>Auditor Verification Office</p>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <p>Consolidated Statement Hash: TCL-FIN-{robustPeriod}-{(robustData.balanceSheet.cashAndBank).toString(36).toUpperCase()}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* CONSOLIDATED STATEMENT PRINT PACK - HIDE ON SCREEN, RENDERED IN DOM FOR html2pdf PRINTING */}
+                  {robustData && (
+                    <div id="robust-financial-pack-print" style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '800px', backgroundColor: '#FFFFFF', padding: '40px', color: '#0F172A' }}>
+                      {/* PAGE 1: COVER PAGE */}
+                      <div className="statement-paper" style={{ pageBreakAfter: 'always', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '1000px', padding: '100px 40px', textAlign: 'center' }}>
+                        <div style={{ marginBottom: '40px' }}>
+                          <img src="/logo.jpeg" alt="TCL Logo" style={{ width: '120px', height: '120px', borderRadius: '8px', objectFit: 'cover' }} />
+                        </div>
+                        <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#059669', marginBottom: '8px', textTransform: 'uppercase' }}>{settings.companyName || 'Titobiloba Consults Limited'}</h1>
+                        <p style={{ fontSize: '1rem', color: '#475569', marginBottom: '100px' }}>
+                          {settings.companyAddress || '78, Aina Road, Agiliti, Mile 12, Kosofe, Lagos State, Nigeria.'}
+                        </p>
+                        
+                        <div style={{ borderTop: '3px solid #059669', borderBottom: '3px solid #059669', padding: '30px 0', margin: '40px 0' }}>
+                          <h2 style={{ fontSize: '1.75rem', fontWeight: '700', letterSpacing: '-0.5px', color: '#1E293B', margin: 0 }}>
+                            COMPREHENSIVE BUSINESS FINANCIAL REPORT PACK
+                          </h2>
+                          <p style={{ fontSize: '1.25rem', color: '#059669', fontWeight: '600', marginTop: '10px', margin: 0 }}>
+                            Reporting Period: {robustData.periodName}
                           </p>
                         </div>
-                      </div>
-                      <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginTop: '12px', letterSpacing: '-0.5px' }}>
-                        MONTHLY BUSINESS PERFORMANCE REPORT
-                      </h2>
-                      <strong style={{ color: '#059669', fontSize: '1rem' }}>{reportData.monthName} {reportData.year}</strong>
-
-                      <div className="report-grid-summary">
-                        <div className="report-summary-box">
-                          <h4 style={{color: '#64748B'}}>Total Monthly Revenue</h4>
-                          <p style={{ color: '#059669' }}>{formatMoney(reportData.revenue)}</p>
-                        </div>
-                        <div className="report-summary-box">
-                          <h4 style={{color: '#64748B'}}>Total Monthly Expenses</h4>
-                          <p style={{ color: '#DC2626' }}>{formatMoney(reportData.expenses)}</p>
-                        </div>
-                        <div className="report-summary-box">
-                          <h4 style={{color: '#64748B'}}>Net Operational Profit</h4>
-                          <p style={{ color: reportData.profit >= 0 ? '#059669' : '#DC2626' }}>{formatMoney(reportData.profit)}</p>
+                        
+                        <div style={{ marginTop: '150px', fontSize: '0.85rem', color: '#64748B' }}>
+                          <p>Compiled By: Corporate Accounting and Financial Operations Department</p>
+                          <p>Date of Publication: {new Date().toISOString().split('T')[0]}</p>
+                          <p>Authentication Hash: TCL-AUDIT-{robustPeriod}-{(robustData.balanceSheet.cashAndBank).toString(36).toUpperCase()}</p>
                         </div>
                       </div>
 
-                      <div className="report-section-title">Income Statement Summary</div>
-                      <table className="print-table" style={{ fontSize: '0.85rem' }}>
-                        <thead>
-                          <tr>
-                            <th>Revenue Source / Service rendered</th>
-                            <th style={{ textAlign: 'right' }}>Month Total (NGN)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reportData.services.length > 0 ? (
-                            reportData.services.map(([name, val]) => (
-                              <tr key={name}>
-                                <td>{name}</td>
-                                <td style={{ textAlign: 'right', fontWeight: '600' }}>{formatMoney(val)}</td>
-                              </tr>
-                            ))
-                          ) : (
+                      {/* PAGE 2: PROFIT OR LOSS */}
+                      <div className="statement-paper" style={{ pageBreakAfter: 'always' }}>
+                        <div className="statement-header-title">Statement of Profit or Loss</div>
+                        <div className="statement-subtitle">For the Period: {robustData.periodName} (Reporting Currency: NGN)</div>
+                        <table className="statement-table">
+                          <thead>
                             <tr>
-                              <td colSpan="2" style={{ textAlign: 'center', color: '#94A3B8' }}>No revenue recorded in this month.</td>
+                              <th>Account / Narrative Description</th>
+                              <th className="text-right">Balance (NGN)</th>
                             </tr>
-                          )}
-                          <tr style={{ fontWeight: '750', backgroundColor: '#F8FAFC' }}>
-                            <td>GROSS OPERATING REVENUE</td>
-                            <td style={{ textAlign: 'right', color: '#059669' }}>{formatMoney(reportData.revenue)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-
-                      <div className="report-section-title">Operational Expense Ledger</div>
-                      <table className="print-table" style={{ fontSize: '0.85rem' }}>
-                        <thead>
-                          <tr>
-                            <th>Expense Category</th>
-                            <th style={{ textAlign: 'right' }}>Month Total (NGN)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reportData.expensesCats.length > 0 ? (
-                            reportData.expensesCats.map(([name, val]) => (
-                              <tr key={name}>
-                                <td>{name}</td>
-                                <td style={{ textAlign: 'right', fontWeight: '600', color: '#DC2626' }}>{formatMoney(val)}</td>
+                          </thead>
+                          <tbody>
+                            <tr><td className="font-bold">Gross Service Revenue</td><td className="text-right font-bold"></td></tr>
+                            <tr><td style={{ paddingLeft: '24px' }}>Client Professional Service Fees</td><td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
+                            <tr className="subtotal-row"><td>Gross Service Revenues</td><td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td></tr>
+                            
+                            <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Direct Operations Cost</td><td className="text-right font-bold"></td></tr>
+                            <tr><td style={{ paddingLeft: '24px' }}>Registry Statutory filing & stamp duties</td><td className="text-right">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
+                            <tr className="subtotal-row"><td>Total Cost of Sales</td><td className="text-right">({formatMoney(robustData.profitAndLoss.costOfSales)})</td></tr>
+                            
+                            <tr className="subtotal-row" style={{ backgroundColor: '#F8FAFC' }}>
+                              <td className="font-bold">GROSS TRADING PROFIT</td>
+                              <td className="text-right font-bold">{formatMoney(robustData.profitAndLoss.grossProfit)}</td>
+                            </tr>
+                            
+                            <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Operating Expenses (OPEX)</td><td className="text-right font-bold"></td></tr>
+                            {robustData.profitAndLoss.opex.map(e => (
+                              <tr key={e.category}>
+                                <td style={{ paddingLeft: '24px' }}>{e.category}</td>
+                                <td className="text-right">{formatMoney(e.amount)}</td>
                               </tr>
-                            ))
-                          ) : (
+                            ))}
                             <tr>
-                              <td colSpan="2" style={{ textAlign: 'center', color: '#94A3B8' }}>No expenses logged in this month.</td>
+                              <td style={{ paddingLeft: '24px' }}>Depreciation Charge (Non-Current assets)</td>
+                              <td className="text-right">{formatMoney(robustData.profitAndLoss.depreciation)}</td>
                             </tr>
-                          )}
-                          <tr style={{ fontWeight: '750', backgroundColor: '#F8FAFC' }}>
-                            <td>TOTAL OPERATIONAL EXPENSES</td>
-                            <td style={{ textAlign: 'right', color: '#DC2626' }}>{formatMoney(reportData.expenses)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                            <tr className="subtotal-row"><td>Total Operating Expenses</td><td className="text-right">({formatMoney(robustData.profitAndLoss.totalExpenses)})</td></tr>
+                            
+                            <tr className="total-row">
+                              <td className="font-bold">NET RETAINED PROFIT / (LOSS) PRE-TAX</td>
+                              <td className="text-right font-bold" style={{ color: robustData.profitAndLoss.netProfit >= 0 ? '#059669' : '#DC2626' }}>
+                                {formatMoney(robustData.profitAndLoss.netProfit)}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
 
-                      <div className="report-section-title">Cash Flow & Outstanding Position</div>
-                      <table className="print-table" style={{ fontSize: '0.85rem' }}>
-                        <tbody>
-                          <tr>
-                            <td>Net Earnings (Pre-Tax profit margin: {reportData.revenue > 0 ? ((reportData.profit / reportData.revenue) * 100).toFixed(0) : 0}%)</td>
-                            <td style={{ textAlign: 'right', fontWeight: '700' }}>{formatMoney(reportData.profit)}</td>
-                          </tr>
-                          <tr>
-                            <td>Invoices generated this Month</td>
-                            <td style={{ textAlign: 'right' }}>{reportData.invoicesCount} Invoices</td>
-                          </tr>
-                          <tr style={{ fontWeight: '650' }}>
-                            <td>Uncollected revenue outstanding from this month</td>
-                            <td style={{ textAlign: 'right', color: '#D97706' }}>{formatMoney(reportData.outstanding)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                      {/* PAGE 3: BALANCE SHEET */}
+                      <div className="statement-paper" style={{ pageBreakAfter: 'always' }}>
+                        <div className="statement-header-title">Statement of Financial Position</div>
+                        <div className="statement-subtitle">As at Date: {robustData.endDate} (Reporting Currency: NGN)</div>
+                        <table className="statement-table">
+                          <thead>
+                            <tr>
+                              <th>Asset Class / Capital Liability Description</th>
+                              <th className="text-right">Cost (NGN)</th>
+                              <th className="text-right">Depreciation</th>
+                              <th className="text-right">Net Value (NGN)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr><td className="font-bold" colSpan="4">Non-Current Assets</td></tr>
+                            <tr>
+                              <td style={{ paddingLeft: '24px' }}>Property, Plant, and Equipment (Schedule 5)</td>
+                              <td className="text-right">{formatMoney(robustData.balanceSheet.fixedAssetsCost)}</td>
+                              <td className="text-right">({formatMoney(robustData.balanceSheet.accumulatedDepreciation)})</td>
+                              <td className="text-right font-bold">{formatMoney(robustData.balanceSheet.nbv)}</td>
+                            </tr>
+                            <tr className="subtotal-row">
+                              <td colSpan="3">Total Non-Current Assets</td>
+                              <td className="text-right">{formatMoney(robustData.balanceSheet.nbv)}</td>
+                            </tr>
 
-                      <div style={{ marginTop: '50px', fontSize: '0.8rem', color: '#64748B', borderTop: '1px solid #E2E8F0', paddingTop: '20px' }}>
-                        <p><strong>Verification Endorsement:</strong></p>
-                        <p style={{ marginTop: '4px' }}>This performance report details actual accounting records maintained locally or securely synced. It is compiled to meet the standards required for small business grants, bank loans, and audit validation.</p>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px' }}>
+                            <tr><td className="font-bold" style={{ paddingTop: '16px' }} colSpan="4">Current Assets</td></tr>
+                            <tr>
+                              <td style={{ paddingLeft: '24px' }} colSpan="3">Cash and Cash Equivalents (Sterling/Access bank)</td>
+                              <td className="text-right">{formatMoney(robustData.balanceSheet.cashAndBank)}</td>
+                            </tr>
+                            <tr className="subtotal-row">
+                              <td colSpan="3">Total Current Assets</td>
+                              <td className="text-right">{formatMoney(robustData.balanceSheet.cashAndBank)}</td>
+                            </tr>
+
+                            <tr className="total-row">
+                              <td colSpan="3">TOTAL NET EMPLOYED ASSETS</td>
+                              <td className="text-right font-bold">{formatMoney(robustData.balanceSheet.totalAssets)}</td>
+                            </tr>
+
+                            <tr><td className="font-bold" style={{ paddingTop: '24px' }} colSpan="4">Equity & Reserves</td></tr>
+                            <tr>
+                              <td style={{ paddingLeft: '24px' }} colSpan="3">Share Capital Seed</td>
+                              <td className="text-right">{formatMoney(robustData.balanceSheet.shareCapital)}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ paddingLeft: '24px' }} colSpan="3">Retained Earnings Reserve</td>
+                              <td className="text-right">{formatMoney(robustData.balanceSheet.retainedEarnings)}</td>
+                            </tr>
+                            <tr className="total-row">
+                              <td colSpan="3">TOTAL SHAREHOLDERS EQUITY & CAPITAL FUNDS</td>
+                              <td className="text-right font-bold">{formatMoney(robustData.balanceSheet.totalEquity)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* PAGE 4: CASH FLOW */}
+                      <div className="statement-paper" style={{ pageBreakAfter: 'always' }}>
+                        <div className="statement-header-title">Statement of Cash Flows</div>
+                        <div className="statement-subtitle">For the Period: {robustData.periodName} (Reporting Currency: NGN)</div>
+                        <table className="statement-table">
+                          <thead>
+                            <tr>
+                              <th>Cash Flow Activity Summary</th>
+                              <th className="text-right">Balance (NGN)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr><td className="font-bold">Cash Flow from Operating Activities</td><td className="text-right"></td></tr>
+                            <tr><td style={{ paddingLeft: '24px' }}>Net Operational Retained Profit</td><td className="text-right">{formatMoney(robustData.cashFlow.operating.netProfit)}</td></tr>
+                            <tr><td style={{ paddingLeft: '24px' }}>Adjustment for Non-Cash Depreciation</td><td className="text-right">{formatMoney(robustData.cashFlow.operating.depreciation)}</td></tr>
+                            <tr className="subtotal-row"><td>Net Cash Generated from Operations</td><td className="text-right">{formatMoney(robustData.cashFlow.operating.netOperating)}</td></tr>
+
+                            <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Cash Flow from Investing Activities</td><td className="text-right"></td></tr>
+                            <tr><td style={{ paddingLeft: '24px' }}>Acquisition of Fixed Assets (Capital Additions)</td><td className="text-right">{formatMoney(robustData.cashFlow.investing.purchaseOfAssets)}</td></tr>
+                            <tr className="subtotal-row"><td>Net Cash Used in Investing Activities</td><td className="text-right">{formatMoney(robustData.cashFlow.investing.purchaseOfAssets)}</td></tr>
+
+                            <tr><td className="font-bold" style={{ paddingTop: '16px' }}>Cash Flow from Financing Activities</td><td className="text-right"></td></tr>
+                            <tr><td style={{ paddingLeft: '24px' }}>Drawings / Capital Injections</td><td className="text-right">{formatMoney(robustData.cashFlow.financing.netFinancing)}</td></tr>
+                            <tr className="subtotal-row"><td>Net Cash from Financing Activities</td><td className="text-right">{formatMoney(robustData.cashFlow.financing.netFinancing)}</td></tr>
+
+                            <tr className="subtotal-row" style={{ backgroundColor: '#F8FAFC' }}>
+                              <td className="font-bold" style={{ paddingTop: '16px' }}>NET CONSOLIDATED INCREASE IN CASH</td>
+                              <td className="text-right font-bold">{formatMoney(robustData.cashFlow.netIncreaseInCash)}</td>
+                            </tr>
+
+                            <tr>
+                              <td>Cash and bank equivalents at beginning of period</td>
+                              <td className="text-right">{formatMoney(robustData.cashFlow.openingCash)}</td>
+                            </tr>
+                            <tr className="total-row">
+                              <td>CASH AND BANK BALANCE AT END OF PERIOD</td>
+                              <td className="text-right font-bold">{formatMoney(robustData.cashFlow.closingCash)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* PAGE 5: NOTES TO STATEMENTS */}
+                      <div className="statement-paper" style={{ pageBreakAfter: 'always' }}>
+                        <div className="statement-header-title">Notes to the Financial Statements</div>
+                        <div className="statement-subtitle">SME Accounting Policy Disclosures (NGN)</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontSize: '0.85rem' }}>
                           <div>
-                            <div style={{ width: '150px', borderBottom: '1px solid #000', height: '30px' }}></div>
-                            <p style={{ marginTop: '4px' }}>Titobiloba Consults Finance Office</p>
+                            <h4 style={{ fontWeight: '700', color: '#1E293B', marginBottom: '6px' }}>Note 1: Basis of Compilation & Significant Accounting Policies</h4>
+                            <p style={{ color: '#475569', lineHeight: '1.5' }}>{robustData.notes.accountingPolicies}</p>
                           </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <p>Date Generated: {new Date().toISOString().split('T')[0]}</p>
-                            <p>System Hash: TCL-{reportMonth}-{Date.now().toString(36).substring(4, 9).toUpperCase()}</p>
+                          <div>
+                            <h4 style={{ fontWeight: '700', color: '#1E293B', marginBottom: '6px' }}>Note 2: Gross Revenues Breakdown</h4>
+                            <table className="statement-table" style={{ fontSize: '0.8rem' }}>
+                              <thead>
+                                <tr>
+                                  <th>Revenue Segment</th>
+                                  <th className="text-right">Total (NGN)</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td>Corporate Affairs Registry & Allied Consulting Services</td>
+                                  <td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td>
+                                </tr>
+                                <tr style={{ fontWeight: 'bold' }}>
+                                  <td>Total Revenues</td>
+                                  <td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td>
+                                </tr>
+                              </tbody>
+                            </table>
                           </div>
                         </div>
+                      </div>
+
+                      {/* PAGE 6: FIXED ASSET REGISTER */}
+                      <div className="statement-paper" style={{ pageBreakAfter: 'always' }}>
+                        <div className="statement-header-title">Fixed Asset Schedule</div>
+                        <div className="statement-subtitle">Property, Plant, and Equipment Register (Cost Basis)</div>
+                        <table className="statement-table" style={{ fontSize: '0.8rem' }}>
+                          <thead>
+                            <tr>
+                              <th>Asset Description</th>
+                              <th>Asset Class</th>
+                              <th>Purchase Date</th>
+                              <th className="text-right">Acquisition Cost (NGN)</th>
+                              <th className="text-right">Accumulated Depreciation</th>
+                              <th className="text-right">Net Book Value (NGN)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {robustData.fixedAssetsSchedule.map(a => (
+                              <tr key={a.id}>
+                                <td>{a.name}</td>
+                                <td>{a.class}</td>
+                                <td>{a.purchaseDate}</td>
+                                <td className="text-right">{formatMoney(a.cost)}</td>
+                                <td className="text-right">({formatMoney(a.closingAccDep)})</td>
+                                <td className="text-right font-bold">{formatMoney(a.nbv)}</td>
+                              </tr>
+                            ))}
+                            <tr style={{ fontWeight: 'bold', backgroundColor: '#F8FAFC' }}>
+                              <td colSpan="3">TOTAL CAPITAL ASSETS</td>
+                              <td className="text-right">{formatMoney(robustData.balanceSheet.fixedAssetsCost)}</td>
+                              <td className="text-right" style={{ color: '#DC2626' }}>({formatMoney(robustData.balanceSheet.accumulatedDepreciation)})</td>
+                              <td className="text-right">{formatMoney(robustData.balanceSheet.nbv)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* PAGE 7: TRIAL BALANCE */}
+                      <div className="statement-paper" style={{ pageBreakAfter: 'always' }}>
+                        <div className="statement-header-title">Trial Balance</div>
+                        <div className="statement-subtitle">As at Date: {robustData.endDate} (Double-Entry Verification)</div>
+                        <table className="statement-table" style={{ fontSize: '0.8rem' }}>
+                          <thead>
+                            <tr>
+                              <th>Account Code</th>
+                              <th>Account Name</th>
+                              <th className="text-right">Debit Balance (NGN)</th>
+                              <th className="text-right">Credit Balance (NGN)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {robustData.trialBalance.map(row => (
+                              <tr key={row.code}>
+                                <td>{row.code}</td>
+                                <td>{row.name}</td>
+                                <td className="text-right">{row.debit > 0 ? formatMoney(row.debit) : '-'}</td>
+                                <td className="text-right">{row.credit > 0 ? formatMoney(row.credit) : '-'}</td>
+                              </tr>
+                            ))}
+                            <tr>
+                              <td>4010</td>
+                              <td>Service Revenue (Revenue)</td>
+                              <td className="text-right">-</td>
+                              <td className="text-right">{formatMoney(robustData.profitAndLoss.revenue)}</td>
+                            </tr>
+                            <tr>
+                              <td>5010</td>
+                              <td>Direct Service Cost (Filing costs)</td>
+                              <td className="text-right">{formatMoney(robustData.profitAndLoss.costOfSales)}</td>
+                              <td className="text-right">-</td>
+                            </tr>
+                            {robustData.profitAndLoss.opex.map((e, idx) => (
+                              <tr key={e.category}>
+                                <td>{6010 + idx}</td>
+                                <td>{e.category} (Expense)</td>
+                                <td className="text-right">{formatMoney(e.amount)}</td>
+                                <td className="text-right">-</td>
+                              </tr>
+                            ))}
+                            {robustData.profitAndLoss.depreciation > 0 && (
+                              <tr>
+                                <td>6110</td>
+                                <td>Depreciation Expense</td>
+                                <td className="text-right">{formatMoney(robustData.profitAndLoss.depreciation)}</td>
+                                <td className="text-right">-</td>
+                              </tr>
+                            )}
+                            <tr style={{ fontWeight: 'bold', backgroundColor: '#F8FAFC' }}>
+                              <td colSpan="2">TOTAL TRIAL BALANCE</td>
+                              <td className="text-right">
+                                {formatMoney(
+                                  robustData.trialBalance.reduce((sum, r) => sum + r.debit, 0) +
+                                  robustData.profitAndLoss.costOfSales + 
+                                  robustData.profitAndLoss.opex.reduce((sum, e) => sum + e.amount, 0) +
+                                  robustData.profitAndLoss.depreciation
+                                )}
+                              </td>
+                              <td className="text-right">
+                                {formatMoney(
+                                  robustData.trialBalance.reduce((sum, r) => sum + r.credit, 0) +
+                                  robustData.profitAndLoss.revenue
+                                )}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* PAGE 8: WORKING PAPERS */}
+                      <div className="statement-paper">
+                        <div className="statement-header-title">Accountant's Working Papers</div>
+                        <div className="statement-subtitle">Audit Reconciliations & Adjustment Entries (NGN)</div>
+                        
+                        <h4 style={{ fontWeight: '700', color: '#1E293B', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>Bank Statement Reconciliation</h4>
+                        <table className="statement-table" style={{ fontSize: '0.85rem' }}>
+                          <tbody>
+                            <tr>
+                              <td>Cash Balance as per General Ledger</td>
+                              <td className="text-right font-bold">{formatMoney(robustData.workingPapers.bankReconciliation.balanceAsPerLedger)}</td>
+                            </tr>
+                            <tr style={{ fontWeight: 'bold', borderTop: '2px solid #0F172A', borderBottom: '3px double #0F172A' }}>
+                              <td>Reconciled Balance as per Access Bank Statement</td>
+                              <td className="text-right">{formatMoney(robustData.workingPapers.bankReconciliation.balanceAsPerStatement)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
