@@ -1038,6 +1038,15 @@ export default function Home() {
       return;
     }
     const element = document.getElementById(elementId);
+    if (!element) return;
+
+    const isOffscreen = elementId === 'robust-financial-pack-print';
+    let originalStyle = '';
+    if (isOffscreen) {
+      originalStyle = element.getAttribute('style') || '';
+      element.setAttribute('style', 'position: relative; background-color: #FFFFFF; padding: 40px; color: #0F172A; width: 800px; margin: 0 auto;');
+    }
+
     const opt = {
       margin:       [0.4, 0.4, 0.4, 0.4],
       filename:     filename,
@@ -1045,7 +1054,17 @@ export default function Home() {
       html2canvas:  { scale: 2, useCORS: true },
       jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
-    window.html2pdf().set(opt).from(element).save();
+
+    window.html2pdf().set(opt).from(element).save().then(() => {
+      if (isOffscreen) {
+        element.setAttribute('style', originalStyle);
+      }
+    }).catch(err => {
+      console.error(err);
+      if (isOffscreen) {
+        element.setAttribute('style', originalStyle);
+      }
+    });
   };
 
   // --- EMAIL PDF SENDING ---
@@ -1070,6 +1089,19 @@ export default function Home() {
 
     setEmailSending(true);
     const element = document.getElementById(emailDetails.elementId);
+    if (!element) {
+      setEmailSending(false);
+      alert('Element not found.');
+      return;
+    }
+
+    const isOffscreen = emailDetails.elementId === 'robust-financial-pack-print';
+    let originalStyle = '';
+    if (isOffscreen) {
+      originalStyle = element.getAttribute('style') || '';
+      element.setAttribute('style', 'position: relative; background-color: #FFFFFF; padding: 40px; color: #0F172A; width: 800px; margin: 0 auto;');
+    }
+
     const opt = {
       margin:       [0.4, 0.4, 0.4, 0.4],
       filename:     emailDetails.filename,
@@ -1082,6 +1114,10 @@ export default function Home() {
       // Generate PDF string in browser
       const pdfBase64 = await window.html2pdf().set(opt).from(element).outputPdf('datauristring');
       
+      if (isOffscreen) {
+        element.setAttribute('style', originalStyle);
+      }
+
       const res = await fetch('/api/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1103,6 +1139,9 @@ export default function Home() {
       }
     } catch (err) {
       console.error(err);
+      if (isOffscreen) {
+        element.setAttribute('style', originalStyle);
+      }
       alert('Failed to process and send email: ' + err.message);
     } finally {
       setEmailSending(false);
