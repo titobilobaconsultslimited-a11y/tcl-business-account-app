@@ -195,7 +195,7 @@ export async function GET(request) {
     // Add Share Capital
     trialBalance.push({ code: '3010', name: 'Share Capital', debit: 0, credit: SHARE_CAPITAL });
     // Add Retained Earnings (Opening)
-    trialBalance.push({ code: '3020', name: 'Retained Earnings', debit: 0, credit: closingRetainedEarnings });
+    trialBalance.push({ code: '3020', name: 'Retained Earnings', debit: 0, credit: openingRetainedEarnings });
 
     // General Ledger structure
     const generalLedger = {};
