@@ -83,6 +83,9 @@ export default function Home() {
   const [arExistingClientId, setArExistingClientId] = useState('');
   const [arExistingRegDetails, setArExistingRegDetails] = useState({ registration_type: '', registration_date: '', annual_returns_due_date: '' });
   const [arClientSearch, setArClientSearch] = useState('');
+  const [arSearchTerm, setArSearchTerm] = useState('');
+  const [arCategoryFilter, setArCategoryFilter] = useState('all');
+  const [arYearFilter, setArYearFilter] = useState('all');
 
   // Invoice Builder State
   const [invoiceClient, setInvoiceClient] = useState('');
@@ -795,28 +798,27 @@ export default function Home() {
     const type = client.registration_type;
     const dueDateStr = client.annual_returns_due_date;
     
-    const filingFee = type === 'NGO' ? 10000 : 5500;
+    // Official CAC filing fee breakdown
+    let filingFee = 5500;
+    if (type === 'NGO') {
+      filingFee = 10000;
+    } else {
+      // Both Business Name and Limited Company are ₦5,500
+      filingFee = 5500;
+    }
+
     const serviceFee = 3000;
     let penalty = 0;
     
-    const today = new Date();
+    const today = new Date('2026-08-26');
     const due = new Date(dueDateStr);
     
     const isOverdue = today > due;
     
     if (isOverdue) {
       const dueYear = due.getFullYear();
-      if (type === 'Business Name') {
-        const penaltyDate = new Date(`${dueYear}-05-30`);
-        if (today > penaltyDate) {
-          penalty = 5000;
-        }
-      } else {
-        const penaltyDate = new Date(`${dueYear + 1}-01-01`);
-        if (today > penaltyDate) {
-          penalty = 5000;
-        }
-      }
+      const yearsOverdue = Math.max(1, 2026 - dueYear);
+      penalty = 5000 * yearsOverdue;
     }
     
     return {
@@ -2592,35 +2594,111 @@ export default function Home() {
 
               {/* TAB: ANNUAL RETURNS TRACKER */}
               {activeTab === 'annual_returns' && (() => {
-                const overdueClients = clients.filter(c => {
+                // Filter registered clients based on search, category, and year
+                const allRegisteredClients = clients.filter(c => {
+                  if (!c.registration_type || !c.annual_returns_due_date) return false;
+                  
+                  // Category filter
+                  if (arCategoryFilter !== 'all') {
+                    if (arCategoryFilter === 'NGO' && c.registration_type !== 'NGO') return false;
+                    if (arCategoryFilter === 'Business Name' && c.registration_type !== 'Business Name') return false;
+                    if (arCategoryFilter === 'Limited Company' && c.registration_type !== 'Limited Company') return false;
+                  }
+
+                  // Year filter
+                  if (arYearFilter !== 'all') {
+                    const regYear = c.registration_date ? String(c.registration_date).split('-')[0] : '';
+                    if (regYear !== arYearFilter) return false;
+                  }
+
+                  // Search term
+                  if (arSearchTerm.trim() !== '') {
+                    const term = arSearchTerm.toLowerCase();
+                    const matchName = c.name && c.name.toLowerCase().includes(term);
+                    const matchPhone = c.phone && c.phone.includes(term);
+                    const matchEmail = c.email && c.email.toLowerCase().includes(term);
+                    const matchRegNum = c.registration_number && String(c.registration_number).toLowerCase().includes(term);
+                    if (!matchName && !matchPhone && !matchEmail && !matchRegNum) return false;
+                  }
+
+                  return true;
+                });
+
+                const overdueClients = allRegisteredClients.filter(c => {
                   const details = getAnnualReturnDetails(c);
                   return details && details.isOverdue && c.annual_returns_status === 'pending';
                 });
 
-                const dueSoonClients = clients.filter(c => {
+                const dueSoonClients = allRegisteredClients.filter(c => {
                   const details = getAnnualReturnDetails(c);
                   if (!details || details.isOverdue || c.annual_returns_status !== 'pending') return false;
                   const due = new Date(c.annual_returns_due_date);
-                  const today = new Date();
+                  const today = new Date('2026-08-26');
                   return (due - today) <= 60 * 24 * 60 * 60 * 1000;
                 });
 
-                const upcomingCompletedClients = clients.filter(c => {
+                const upcomingCompletedClients = allRegisteredClients.filter(c => {
                   if (!c.registration_type || !c.annual_returns_due_date) return false;
                   if (c.annual_returns_status === 'done') return true;
                   const details = getAnnualReturnDetails(c);
                   if (!details || details.isOverdue) return false;
                   const due = new Date(c.annual_returns_due_date);
-                  const today = new Date();
+                  const today = new Date('2026-08-26');
                   return (due - today) > 60 * 24 * 60 * 60 * 1000;
                 });
 
-                const allRegisteredClients = clients.filter(c => c.registration_type && c.annual_returns_due_date);
+                // Unique list of registration years for dropdown filter
+                const availableYears = Array.from(new Set(
+                  clients
+                    .filter(c => c.registration_date)
+                    .map(c => String(c.registration_date).split('-')[0])
+                )).sort().reverse();
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    {/* Header with Add Company Button */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    {/* Header Controls: Search, Category, Year, & Add Button */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', flex: 1 }}>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="🔍 Search company name, RC/BN number, phone, email..."
+                          value={arSearchTerm}
+                          onChange={(e) => setArSearchTerm(e.target.value)}
+                          style={{ minWidth: '280px', flex: 1, padding: '10px 14px', borderRadius: '8px' }}
+                        />
+                        <select
+                          className="form-control"
+                          value={arCategoryFilter}
+                          onChange={(e) => setArCategoryFilter(e.target.value)}
+                          style={{ width: '180px', padding: '10px 14px', borderRadius: '8px' }}
+                        >
+                          <option value="all">All Categories</option>
+                          <option value="NGO">🏛️ NGO</option>
+                          <option value="Limited Company">🏢 Limited Company</option>
+                          <option value="Business Name">🏪 Business Name</option>
+                        </select>
+                        <select
+                          className="form-control"
+                          value={arYearFilter}
+                          onChange={(e) => setArYearFilter(e.target.value)}
+                          style={{ width: '150px', padding: '10px 14px', borderRadius: '8px' }}
+                        >
+                          <option value="all">All Reg Years</option>
+                          {availableYears.map(yr => (
+                            <option key={yr} value={yr}>{yr}</option>
+                          ))}
+                        </select>
+                        {(arSearchTerm || arCategoryFilter !== 'all' || arYearFilter !== 'all') && (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => { setArSearchTerm(''); setArCategoryFilter('all'); setArYearFilter('all'); }}
+                            style={{ padding: '8px 12px' }}
+                          >
+                            Reset Filters
+                          </button>
+                        )}
+                      </div>
                       <button
                         className="btn btn-primary"
                         id="ar-add-company-btn"
@@ -2737,9 +2815,10 @@ export default function Home() {
                               <table>
                                 <thead>
                                   <tr>
-                                    <th>Client / Entity</th>
+                                    <th>Company / Entity</th>
+                                    <th>Registration Number</th>
                                     <th>Type</th>
-                                    <th>Registration Date</th>
+                                    <th>Reg Date</th>
                                     <th>Next Filing Date</th>
                                     <th>Status</th>
                                     <th>Total Cost</th>
@@ -2759,7 +2838,7 @@ export default function Home() {
                                       statusBadge = <span className="badge badge-danger" style={{ fontWeight: 'bold' }}>OVERDUE</span>;
                                     } else {
                                       const due = new Date(c.annual_returns_due_date);
-                                      const today = new Date();
+                                      const today = new Date('2026-08-26');
                                       const isDueSoon = (due - today) <= 60 * 24 * 60 * 60 * 1000;
                                       statusText = isDueSoon ? 'Due Soon' : 'Upcoming';
                                       statusBadge = isDueSoon ? 
@@ -2767,13 +2846,23 @@ export default function Home() {
                                         <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', fontWeight: 'bold' }}>UPCOMING</span>;
                                     }
 
-                                    const waText = `Hello *${c.name}*,\n\nThis is a friendly reminder from *Titobiloba Consults Limited* regarding the annual returns filing for your entity registered as a *${c.registration_type}*.\n\n*Next Filing Due Date:* ${c.annual_returns_due_date}\n\n*Payment Breakdown:*\n- Official Filing Cost: ${formatMoney(details?.filingFee || 0)}\n- Professional Service Fee: ${formatMoney(details?.serviceFee || 0)}\n- Penalty Accrued: ${details?.penalty > 0 ? formatMoney(details.penalty) + ' (Overdue)' : 'None'}\n\n*Total Payable:* *${formatMoney(details?.total || 0)}*\n\nTo prevent further penalties or CAC query, please reach out to us to process your annual filing. Thank you!`;
+                                    const regNumDisplay = c.registration_number ? c.registration_number : 'NIL / Pending';
+                                    const waText = `Hello *${c.name}*,\n\nThis is a friendly reminder from *Titobiloba Consults Limited* regarding the annual returns filing for your entity registered as a *${c.registration_type}* (Reg No: ${regNumDisplay}).\n\n*Next Filing Due Date:* ${c.annual_returns_due_date}\n\n*Payment Breakdown:*\n- Official Filing Cost: ${formatMoney(details?.filingFee || 0)}\n- Professional Service Fee: ${formatMoney(details?.serviceFee || 0)}\n- Penalty Accrued: ${details?.penalty > 0 ? formatMoney(details.penalty) + ' (Overdue)' : 'None'}\n\n*Total Payable:* *${formatMoney(details?.total || 0)}*\n\nTo prevent further penalties or CAC query, please reach out to us to process your annual filing. Thank you!`;
 
                                     return (
                                       <tr key={c.id}>
                                         <td>
                                           <strong>{c.name}</strong>
-                                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone}</div>
+                                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                            {c.phone ? <span>📞 {c.phone}</span> : null}
+                                            {c.phone && c.email ? ' | ' : null}
+                                            {c.email ? <span>✉️ {c.email}</span> : null}
+                                          </div>
+                                        </td>
+                                        <td>
+                                          <strong style={{ fontFamily: 'monospace', color: 'var(--primary-color)' }}>
+                                            {c.registration_number || 'NIL / Pending'}
+                                          </strong>
                                         </td>
                                         <td>
                                           <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary-color)', fontWeight: 'bold' }}>
@@ -2828,7 +2917,8 @@ export default function Home() {
                               <table>
                                 <thead>
                                   <tr>
-                                    <th>Client / Entity</th>
+                                    <th>Company / Entity</th>
+                                    <th>Reg Number</th>
                                     <th>Type</th>
                                     <th>Due Date</th>
                                     <th>Filing Fee</th>
@@ -2841,12 +2931,22 @@ export default function Home() {
                                 <tbody>
                                   {overdueClients.map(c => {
                                     const details = getAnnualReturnDetails(c);
-                                    const text = `Hello *${c.name}*,\n\nThis is a friendly reminder from *Titobiloba Consults Limited* regarding the annual returns filing for your entity registered as a *${c.registration_type}*.\n\n*Next Filing Due Date:* ${c.annual_returns_due_date}\n\n*Payment Breakdown:*\n- Official Filing Cost: ${formatMoney(details.filingFee)}\n- Professional Service Fee: ${formatMoney(details.serviceFee)}\n- Penalty Accrued: ${details.penalty > 0 ? formatMoney(details.penalty) + ' (Overdue)' : 'None'}\n\n*Total Payable:* *${formatMoney(details.total)}*\n\nTo prevent further penalties or CAC query, please reach out to us to process your annual filing. Thank you!`;
+                                    const regNumDisplay = c.registration_number ? c.registration_number : 'NIL / Pending';
+                                    const text = `Hello *${c.name}*,\n\nThis is a friendly reminder from *Titobiloba Consults Limited* regarding the annual returns filing for your entity registered as a *${c.registration_type}* (Reg No: ${regNumDisplay}).\n\n*Next Filing Due Date:* ${c.annual_returns_due_date}\n\n*Payment Breakdown:*\n- Official Filing Cost: ${formatMoney(details.filingFee)}\n- Professional Service Fee: ${formatMoney(details.serviceFee)}\n- Penalty Accrued: ${details.penalty > 0 ? formatMoney(details.penalty) + ' (Overdue)' : 'None'}\n\n*Total Payable:* *${formatMoney(details.total)}*\n\nTo prevent further penalties or CAC query, please reach out to us to process your annual filing. Thank you!`;
                                     return (
                                       <tr key={c.id}>
                                         <td>
                                           <strong>{c.name}</strong>
-                                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone}</div>
+                                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                            {c.phone ? <span>📞 {c.phone}</span> : null}
+                                            {c.phone && c.email ? ' | ' : null}
+                                            {c.email ? <span>✉️ {c.email}</span> : null}
+                                          </div>
+                                        </td>
+                                        <td>
+                                          <strong style={{ fontFamily: 'monospace', color: 'var(--accent-red)' }}>
+                                            {c.registration_number || 'NIL / Pending'}
+                                          </strong>
                                         </td>
                                         <td>
                                           <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', fontWeight: 'bold' }}>
@@ -2892,7 +2992,8 @@ export default function Home() {
                               <table>
                                 <thead>
                                   <tr>
-                                    <th>Client / Entity</th>
+                                    <th>Company / Entity</th>
+                                    <th>Reg Number</th>
                                     <th>Type</th>
                                     <th>Due Date</th>
                                     <th>Filing Fee</th>
@@ -2905,12 +3006,22 @@ export default function Home() {
                                 <tbody>
                                   {dueSoonClients.map(c => {
                                     const details = getAnnualReturnDetails(c);
-                                    const text = `Hello *${c.name}*,\n\nThis is a friendly reminder from *Titobiloba Consults Limited* regarding the annual returns filing for your entity registered as a *${c.registration_type}*.\n\n*Next Filing Due Date:* ${c.annual_returns_due_date}\n\n*Payment Breakdown:*\n- Official Filing Cost: ${formatMoney(details.filingFee)}\n- Professional Service Fee: ${formatMoney(details.serviceFee)}\n- Penalty Accrued: ${details.penalty > 0 ? formatMoney(details.penalty) + ' (Overdue)' : 'None'}\n\n*Total Payable:* *${formatMoney(details.total)}*\n\nTo prevent further penalties or CAC query, please reach out to us to process your annual filing. Thank you!`;
+                                    const regNumDisplay = c.registration_number ? c.registration_number : 'NIL / Pending';
+                                    const text = `Hello *${c.name}*,\n\nThis is a friendly reminder from *Titobiloba Consults Limited* regarding the annual returns filing for your entity registered as a *${c.registration_type}* (Reg No: ${regNumDisplay}).\n\n*Next Filing Due Date:* ${c.annual_returns_due_date}\n\n*Payment Breakdown:*\n- Official Filing Cost: ${formatMoney(details.filingFee)}\n- Professional Service Fee: ${formatMoney(details.serviceFee)}\n- Penalty Accrued: ${details.penalty > 0 ? formatMoney(details.penalty) + ' (Overdue)' : 'None'}\n\n*Total Payable:* *${formatMoney(details.total)}*\n\nTo prevent further penalties or CAC query, please reach out to us to process your annual filing. Thank you!`;
                                     return (
                                       <tr key={c.id}>
                                         <td>
                                           <strong>{c.name}</strong>
-                                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone}</div>
+                                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                            {c.phone ? <span>📞 {c.phone}</span> : null}
+                                            {c.phone && c.email ? ' | ' : null}
+                                            {c.email ? <span>✉️ {c.email}</span> : null}
+                                          </div>
+                                        </td>
+                                        <td>
+                                          <strong style={{ fontFamily: 'monospace', color: 'var(--accent-yellow)' }}>
+                                            {c.registration_number || 'NIL / Pending'}
+                                          </strong>
                                         </td>
                                         <td>
                                           <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'var(--accent-yellow)', fontWeight: 'bold' }}>
