@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { Pool } = require('@neondatabase/serverless');
 
 const monthMap = {
   'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAY': '05', 'JUN': '06',
@@ -9,7 +10,6 @@ const monthMap = {
 function formatIsoDate(dateStr) {
   if (!dateStr || dateStr === 'NIL') return null;
   
-  // Format "Apr 30, 2024" or "30 Apr 2024"
   const m1 = dateStr.match(/([A-Za-z]{3})\s+(\d{1,2}),?\s+(\d{4})/);
   if (m1) {
     const m = monthMap[m1[1].toUpperCase()] || '01';
@@ -75,7 +75,7 @@ function calculateAnnualReturnDueDate(regDateIso, category) {
   }
 }
 
-function seedCACData() {
+async function seedCACData() {
   const jsonPath = path.join(__dirname, '../cac_sorted_by_year_month.json');
   if (!fs.existsSync(jsonPath)) {
     console.error('Source JSON file not found:', jsonPath);
@@ -88,7 +88,6 @@ function seedCACData() {
   const clientRecords = rawData.map((item, index) => {
     const regDateIso = formatIsoDate(item.dateOfReg);
     
-    // Normalize registration type string for db and UI
     let regType = 'Limited Company';
     if (item.category === 'NGO') regType = 'NGO';
     if (item.category === 'Business Name') regType = 'Business Name';
@@ -110,43 +109,56 @@ function seedCACData() {
     };
   });
 
+  // 1. Update db.json
   const dbPath = path.join(__dirname, '../db.json');
   let currentDb = {};
   if (fs.existsSync(dbPath)) {
     try {
       currentDb = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
     } catch (e) {
-      console.error('Error reading db.json, creating new database structure');
+      console.error('Error reading db.json');
     }
   }
 
   currentDb.clients = clientRecords;
-
   fs.writeFileSync(dbPath, JSON.stringify(currentDb, null, 2), 'utf8');
-  console.log(`Successfully updated ${dbPath} with ${clientRecords.length} authentic CAC companies!`);
+  console.log(`✓ Updated db.json with ${clientRecords.length} authentic CAC companies!`);
 
-  // Count Overdue vs Due Soon vs Upcoming based on 2026-08-26
-  const today = new Date('2026-08-26');
-  let overdue = 0;
-  let dueSoon = 0;
-  let upcoming = 0;
+  // 2. Update PostgreSQL if DATABASE_URL is available
+  let dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl && fs.existsSync(path.join(__dirname, '../.env.local'))) {
+    const envContent = fs.readFileSync(path.join(__dirname, '../.env.local'), 'utf8');
+    const match = envContent.match(/DATABASE_URL="?([^"\r\n]+)"?/);
+    if (match) dbUrl = match[1];
+  }
 
-  clientRecords.forEach(c => {
-    const due = new Date(c.annual_returns_due_date);
-    const diffDays = (due - today) / (1000 * 60 * 60 * 24);
-    if (due < today) {
-      overdue++;
-    } else if (diffDays <= 60) {
-      dueSoon++;
-    } else {
-      upcoming++;
+  if (dbUrl) {
+    console.log('\nSyncing with Neon PostgreSQL Database...');
+    const pool = new Pool({ connectionString: dbUrl });
+    const pgClient = await pool.connect();
+    try {
+      // Clear existing clients table
+      await pgClient.query('DELETE FROM clients');
+      console.log('✓ Cleared old clients from PostgreSQL database table.');
+
+      // Insert all 304 CAC client records
+      for (const c of clientRecords) {
+        await pgClient.query(
+          `INSERT INTO clients (id, name, email, phone, address, registration_type, registration_number, registration_date, annual_returns_due_date, annual_returns_status, birthday, birthday_wished)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [c.id, c.name, c.email, c.phone, c.address, c.registration_type, c.registration_number, c.registration_date, c.annual_returns_due_date, c.annual_returns_status, c.birthday, false]
+        );
+      }
+      console.log(`✓ Successfully inserted all ${clientRecords.length} CAC companies into PostgreSQL!`);
+    } catch (pgErr) {
+      console.error('Error syncing PostgreSQL:', pgErr.message);
+    } finally {
+      pgClient.release();
+      await pool.end();
     }
-  });
+  }
 
-  console.log(`\n=== CAC Annual Returns Due Status Overview ===`);
-  console.log(` 🚨 Overdue Filings: ${overdue}`);
-  console.log(` ⚠️ Due in 60 Days: ${dueSoon}`);
-  console.log(` 🟢 Upcoming Filings: ${upcoming}`);
+  console.log(`\nAll 304 CAC companies are now fully synced in both Local File & PostgreSQL Databases!`);
 }
 
-seedCACData();
+seedCACData().catch(console.error);
