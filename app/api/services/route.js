@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { requireAuthentication } from '@/lib/auth';
 const db = require('@/lib/db');
+const { toCurrency } = require('@/lib/accounting');
 
-export async function GET() {
+export async function GET(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const services = await db.getServices();
     return NextResponse.json(services);
@@ -11,14 +15,20 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const body = await request.json();
     if (!body.name || body.price === undefined) {
       return NextResponse.json({ error: 'Service name and price are required' }, { status: 400 });
     }
+    const price = toCurrency(Number(body.price));
+    if (price === null || price < 0) {
+      return NextResponse.json({ error: 'Service price must be a non-negative number.' }, { status: 400 });
+    }
     const newService = await db.addService({
       name: body.name,
-      price: Number(body.price),
+      price,
       description: body.description || ''
     });
     return NextResponse.json(newService);
@@ -28,6 +38,8 @@ export async function POST(request) {
 }
 
 export async function DELETE(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const { searchParams } = new URL(request.url);
     const idStr = searchParams.get('id');
@@ -45,14 +57,20 @@ export async function DELETE(request) {
 }
 
 export async function PUT(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const body = await request.json();
     if (!body.id || !body.name || body.price === undefined) {
       return NextResponse.json({ error: 'Service ID, name, and price are required' }, { status: 400 });
     }
+    const price = toCurrency(Number(body.price));
+    if (price === null || price < 0) {
+      return NextResponse.json({ error: 'Service price must be a non-negative number.' }, { status: 400 });
+    }
     const updatedService = await db.updateService(body.id, {
       name: body.name,
-      price: Number(body.price),
+      price,
       description: body.description || ''
     });
     return NextResponse.json(updatedService);
@@ -60,4 +78,3 @@ export async function PUT(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

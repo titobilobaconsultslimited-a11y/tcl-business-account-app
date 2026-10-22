@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
+import { requireAuthentication } from '@/lib/auth';
 const db = require('@/lib/db');
 
-export async function GET() {
+export async function GET(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const clients = await db.getClients();
     return NextResponse.json(clients);
@@ -11,6 +14,8 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const body = await request.json();
     if (!body.name) {
@@ -35,6 +40,8 @@ export async function POST(request) {
 }
 
 export async function PUT(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const body = await request.json();
     if (!body.id || !body.name) {
@@ -60,6 +67,8 @@ export async function PUT(request) {
 }
 
 export async function DELETE(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const { searchParams } = new URL(request.url);
     const idStr = searchParams.get('id');

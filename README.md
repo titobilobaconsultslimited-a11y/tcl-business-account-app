@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TCL Business Account Portal
 
-## Getting Started
+A Next.js portal for client and service records, transactions, invoicing, receipts, and financial statements.
 
-First, run the development server:
+## Requirements
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js 20 or later
+- npm
+- PostgreSQL / Neon connection string for persistent deployments
+- Gmail account with 2-Step Verification enabled and a Google App Password for outgoing mail
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Local setup
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+1. Install packages with `npm install`.
+2. Copy `.env.example` to `.env.local`.
+3. Set `DATABASE_URL`, `APP_LOGIN_EMAIL`, an `APP_LOGIN_PASSWORD` of at least 12 characters, and a unique random `APP_SESSION_SECRET` of at least 32 characters.
+4. For Gmail delivery, set `GMAIL_USER` to the sending Gmail address and `GMAIL_APP_PASSWORD` to its Google App Password.
+5. Set `FINANCIAL_OPENING_BANK_BALANCE` and `FINANCIAL_SHARE_CAPITAL` to the actual accounting opening balances.
+6. Start the application with `npm run dev`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Never commit `.env.local`, a Gmail App Password, database credentials, or the application login password. In production, store these values in the hosting provider's encrypted environment-variable settings. The local JSON database is intended for development only; use PostgreSQL for persistent or multi-instance deployments.
 
-## Learn More
+## Gmail setup
 
-To learn more about Next.js, take a look at the following resources:
+Enable 2-Step Verification for the Gmail account, then create an App Password in the Google Account security settings. Use that generated password only as `GMAIL_APP_PASSWORD`; do not use the normal Gmail password. The app uses Gmail's SMTP service over TLS on port 465. Gmail configuration is server-only and is not returned by settings or API responses.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Checks
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `npm test` runs unit tests for invoice calculations, date validation, signed sessions, and atomic payment records.
+- `npm run lint` runs ESLint.
+- `npm run build` creates a production build.
 
-## Deploy on Vercel
+## Deployment notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Configure the same environment variables on the deployment host, use a strong unique session signing secret, and redeploy after changing secrets. Keep database backups and verify financial opening balances with an accountant before relying on generated statements for filings.

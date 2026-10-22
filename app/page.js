@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 // --- INLINE SVG ICONS FOR ZERO-DEPENDENCY SPEED & SSR SAFETY ---
 const IconDashboard = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>;
@@ -28,6 +28,7 @@ export default function Home() {
   
   // Authentication State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -90,7 +91,7 @@ export default function Home() {
   // Invoice Builder State
   const [invoiceClient, setInvoiceClient] = useState('');
   const [invoiceIssueDate, setInvoiceIssueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [invoiceDueDate, setInvoiceDueDate] = useState(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [invoiceDueDate, setInvoiceDueDate] = useState(new Date(new Date().getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [invoiceItems, setInvoiceItems] = useState([{ service_id: '', subtype: '', cost_price: '', description: '', quantity: 1, unit_price: '', amount: 0 }]);
   const [invoiceDiscount, setInvoiceDiscount] = useState('');
   const [invoiceTax, setInvoiceTax] = useState(7.5); // Default 7.5%
@@ -107,9 +108,11 @@ export default function Home() {
 
   // Robust Financial Statements State
   const [reportType, setReportType] = useState('monthly'); // 'monthly' | 'robust'
-  const [robustPeriod, setRobustPeriod] = useState('2024'); // '2024' | '2025' | 'custom'
-  const [robustStart, setRobustStart] = useState('2024-01-01');
-  const [robustEnd, setRobustEnd] = useState('2024-12-31');
+  const initialReportYear = String(new Date().getFullYear());
+  const reportYears = Array.from({ length: 5 }, (_, offset) => String(Number(initialReportYear) - offset));
+  const [robustPeriod, setRobustPeriod] = useState(initialReportYear);
+  const [robustStart, setRobustStart] = useState(`${initialReportYear}-01-01`);
+  const [robustEnd, setRobustEnd] = useState(`${initialReportYear}-12-31`);
   const [robustSubTab, setRobustSubTab] = useState('pl'); // 'pl', 'bs', 'cf', 'notes', 'fa', 'dep', 'tb', 'gl', 'coa', 'wp'
   const [robustData, setRobustData] = useState(null);
   const [robustLoading, setRobustLoading] = useState(false);
@@ -125,6 +128,14 @@ export default function Home() {
   const incomeTrendChartRef = useRef(null);
   const expenseBreakdownChartRef = useRef(null);
 
+  const changeActiveTab = (tab) => {
+    setActiveTab(tab);
+    setSelectedTxIds([]);
+    setSelectedInvoiceIds([]);
+    setSelectedClientIds([]);
+    setSelectedServiceIds([]);
+  };
+
   // Currency Formatter
   const formatMoney = (value) => {
     return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(value);
@@ -134,13 +145,23 @@ export default function Home() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const fetchJson = async path => {
+        const response = await fetch(path);
+        const payload = await response.json();
+        if (response.status === 401) {
+          setIsLoggedIn(false);
+          throw new Error('Your session has expired. Please sign in again.');
+        }
+        if (!response.ok) throw new Error(payload.error || `Unable to load ${path}.`);
+        return payload;
+      };
       const [resClients, resServices, resTransactions, resInvoices, resReceipts, resSettings] = await Promise.all([
-        fetch('/api/clients').then(r => r.json()),
-        fetch('/api/services').then(r => r.json()),
-        fetch('/api/transactions').then(r => r.json()),
-        fetch('/api/invoices').then(r => r.json()),
-        fetch('/api/receipts').then(r => r.json()),
-        fetch('/api/settings').then(r => r.json())
+        fetchJson('/api/clients'),
+        fetchJson('/api/services'),
+        fetchJson('/api/transactions'),
+        fetchJson('/api/invoices'),
+        fetchJson('/api/receipts'),
+        fetchJson('/api/settings'),
       ]);
 
       setClients(resClients);
@@ -171,66 +192,68 @@ export default function Home() {
     }
   };
 
-  // Check session on mount
+  // Verify the server-side session on mount.
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isAuth = localStorage.getItem('tcl_logged_in') === 'true' || sessionStorage.getItem('tcl_logged_in') === 'true';
-      if (isAuth) {
-        setIsLoggedIn(true);
-      }
-    }
+    fetch('/api/auth')
+      .then(response => response.json())
+      .then(data => setIsLoggedIn(data.authenticated === true))
+      .catch(error => {
+        console.error('Failed to verify sign-in session:', error);
+        setLoginError('Unable to verify your session. Please refresh and try again.');
+      })
+      .finally(() => setAuthLoading(false));
   }, []);
 
   // Fetch all data only when logged in
   useEffect(() => {
     if (isLoggedIn) {
-      fetchData();
+      Promise.resolve().then(fetchData);
     }
   }, [isLoggedIn]);
 
   // Login handler
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
     setLoginLoading(true);
-    
-    // Simulate verification delay for a premium feel
-    setTimeout(() => {
-      if (loginEmail === 'titobilobaconsultslimited@gmail.com' && loginPassword === '*Oluwatobi1701') {
-        if (rememberMe) {
-          localStorage.setItem('tcl_logged_in', 'true');
-        } else {
-          sessionStorage.setItem('tcl_logged_in', 'true');
-        }
+    try {
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword, rememberMe }),
+      });
+      const result = await response.json();
+      if (response.ok) {
         setIsLoggedIn(true);
       } else {
-        setLoginError('Invalid email address or password. Please try again.');
+        setLoginError(result.error || 'Unable to sign in. Please try again.');
       }
+    } catch (error) {
+      console.error('Sign-in failed:', error);
+      setLoginError('Unable to connect to the sign-in service. Please try again.');
+    } finally {
       setLoginLoading(false);
-    }, 800);
-  };
-
-  // Logout handler
-  const handleLogout = () => {
-    if (confirm('Are you sure you want to log out of the portal?')) {
-      localStorage.removeItem('tcl_logged_in');
-      sessionStorage.removeItem('tcl_logged_in');
-      setIsLoggedIn(false);
-      // Reset inputs
-      setLoginEmail('');
-      setLoginPassword('');
-      setLoginError('');
     }
   };
 
-  useEffect(() => {
-    setSelectedTxIds([]);
-    setSelectedInvoiceIds([]);
-    setSelectedClientIds([]);
-    setSelectedServiceIds([]);
-  }, [activeTab]);
+  // Logout handler
+  const handleLogout = async () => {
+    if (confirm('Are you sure you want to log out of the portal?')) {
+      try {
+        const response = await fetch('/api/auth', { method: 'DELETE' });
+        if (!response.ok) throw new Error('The sign-out request failed.');
+        setIsLoggedIn(false);
+        setLoginEmail('');
+        setLoginPassword('');
+        setLoginError('');
+      } catch (error) {
+        console.error('Sign-out failed:', error);
+        alert('Unable to sign out. Please try again.');
+      }
+    }
+  };
 
-  const fetchRobustStatements = async () => {
+  const fetchRobustStatements = useCallback(async () => {
     try {
       setRobustLoading(true);
       let url = '/api/financial-statements?';
@@ -252,25 +275,15 @@ export default function Home() {
     } finally {
       setRobustLoading(false);
     }
-  };
+  }, [robustPeriod, robustStart, robustEnd]);
 
   useEffect(() => {
     if (reportType === 'robust') {
-      fetchRobustStatements();
+      Promise.resolve().then(fetchRobustStatements);
     }
-  }, [reportType, robustPeriod, robustStart, robustEnd]);
+  }, [reportType, fetchRobustStatements]);
 
-  // RENDER CHARTS
-  useEffect(() => {
-    if (activeTab === 'dashboard' && !loading && typeof window !== 'undefined' && window.Chart) {
-      renderDashboardCharts();
-    }
-    return () => {
-      destroyCharts();
-    };
-  }, [activeTab, loading, transactions]);
-
-  const destroyCharts = () => {
+  const destroyCharts = useCallback(() => {
     if (incomeTrendChartRef.current) {
       incomeTrendChartRef.current.destroy();
       incomeTrendChartRef.current = null;
@@ -279,9 +292,9 @@ export default function Home() {
       expenseBreakdownChartRef.current.destroy();
       expenseBreakdownChartRef.current = null;
     }
-  };
+  }, []);
 
-  const renderDashboardCharts = () => {
+  const renderDashboardCharts = useCallback(() => {
     destroyCharts();
     
     // Aggregate Monthly Income Trend
@@ -401,7 +414,17 @@ export default function Home() {
         }
       });
     }
-  };
+  }, [destroyCharts, theme, transactions]);
+
+  // RENDER CHARTS
+  useEffect(() => {
+    if (activeTab === 'dashboard' && !loading && typeof window !== 'undefined' && window.Chart) {
+      renderDashboardCharts();
+    }
+    return () => {
+      destroyCharts();
+    };
+  }, [activeTab, loading, renderDashboardCharts, destroyCharts]);
 
   // TRIGGER THEME TOGGLE
   const toggleTheme = async () => {
@@ -415,7 +438,14 @@ export default function Home() {
       await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated)
+        body: JSON.stringify({
+          theme: nextTheme,
+          senderEmail: updated.senderEmail || '',
+          companyName: updated.companyName || '',
+          companyAddress: updated.companyAddress || '',
+          companyPhone: updated.companyPhone || '',
+          bankDetails: updated.bankDetails || '',
+        })
       });
       setSettings(updated);
     } catch (err) {
@@ -952,7 +982,7 @@ export default function Home() {
         setInvoiceAmountPaid('');
         setInvoiceNotes('');
         fetchData();
-        setActiveTab('invoices');
+        changeActiveTab('invoices');
       } else {
         const error = await res.json();
         alert('Error creating invoice: ' + error.error);
@@ -983,6 +1013,22 @@ export default function Home() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleSendInvoiceReminder = async (invoice) => {
+    try {
+      const response = await fetch('/api/email/reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId: invoice.id }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Unable to send payment reminder.');
+      alert(`Payment reminder sent for invoice ${invoice.invoice_number}.`);
+    } catch (error) {
+      console.error('Payment reminder failed:', error);
+      alert(error.message || 'Unable to send payment reminder.');
     }
   };
 
@@ -1126,7 +1172,7 @@ export default function Home() {
         body: JSON.stringify({
           to: emailDetails.to,
           subject: emailDetails.subject,
-          htmlBody: `<p>${emailDetails.body.replace(/\n/g, '<br>')}</p>`,
+          htmlBody: emailDetails.body,
           filename: emailDetails.filename,
           pdfBase64: pdfBase64
         })
@@ -1157,7 +1203,14 @@ export default function Home() {
       const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
+        body: JSON.stringify({
+          theme: settings.theme || 'dark',
+          senderEmail: settings.senderEmail || '',
+          companyName: settings.companyName || '',
+          companyAddress: settings.companyAddress || '',
+          companyPhone: settings.companyPhone || '',
+          bankDetails: settings.bankDetails || '',
+        })
       });
       if (res.ok) {
         alert('Settings saved successfully!');
@@ -1395,6 +1448,14 @@ export default function Home() {
   const todayMMDD = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const birthdayTodayCount = clients.filter(c => c.birthday === todayMMDD && !c.birthday_wished).length;
 
+  if (authLoading) {
+    return (
+      <div className="login-page-wrapper">
+        <div className="login-card" role="status">Checking your sign-in session...</div>
+      </div>
+    );
+  }
+
   if (!isLoggedIn) {
     return (
       <div className="login-page-wrapper">
@@ -1513,32 +1574,32 @@ export default function Home() {
         
         <ul className="sidebar-nav">
           <li className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('dashboard')}>
+            <button onClick={() => changeActiveTab('dashboard')}>
               <IconDashboard /> Dashboard
             </button>
           </li>
           <li className={`nav-item ${activeTab === 'clients' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('clients')}>
+            <button onClick={() => changeActiveTab('clients')}>
               <IconClients /> Clients
             </button>
           </li>
           <li className={`nav-item ${activeTab === 'services' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('services')}>
+            <button onClick={() => changeActiveTab('services')}>
               <IconServices /> Services
             </button>
           </li>
           <li className={`nav-item ${activeTab === 'transactions' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('transactions')}>
+            <button onClick={() => changeActiveTab('transactions')}>
               <IconTransactions /> Transactions
             </button>
           </li>
           <li className={`nav-item ${activeTab === 'invoices' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('invoices')}>
+            <button onClick={() => changeActiveTab('invoices')}>
               <IconInvoices /> Invoices & Receipts
             </button>
           </li>
           <li className={`nav-item ${activeTab === 'annual_returns' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('annual_returns')} style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            <button onClick={() => changeActiveTab('annual_returns')} style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
               <IconCalendar />
               <span style={{ marginLeft: '12px' }}>Annual Returns</span>
               {arBadgeCount > 0 && (
@@ -1557,7 +1618,7 @@ export default function Home() {
             </button>
           </li>
           <li className={`nav-item ${activeTab === 'birthdays' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('birthdays')} style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            <button onClick={() => changeActiveTab('birthdays')} style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
               <IconCake />
               <span style={{ marginLeft: '12px' }}>Birthdays</span>
               {birthdayTodayCount > 0 && (
@@ -1576,12 +1637,12 @@ export default function Home() {
             </button>
           </li>
           <li className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('reports')}>
+            <button onClick={() => changeActiveTab('reports')}>
               <IconReports /> Monthly Reports
             </button>
           </li>
           <li className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('settings')}>
+            <button onClick={() => changeActiveTab('settings')}>
               <IconSettings /> Settings
             </button>
           </li>
@@ -2211,7 +2272,7 @@ export default function Home() {
                               </div>
                             </div>
                             
-                            <h3 style={{fontSize: '1rem', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px', marginBottom: '12px'}}>Payment Settlement Details</h3>
+                            <h3 style={{fontSize: '1rem', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px', marginBottom: '12px'}}>Payment Details</h3>
                             <table className="print-table">
                               <thead>
                                 <tr>
@@ -2220,12 +2281,10 @@ export default function Home() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {selectedReceipt.invoice?.items?.map((item, idx) => (
-                                  <tr key={idx}>
-                                    <td>{item.description} (Qty: {item.quantity})</td>
-                                    <td style={{textAlign: 'right'}}>{formatMoney(item.amount)}</td>
-                                  </tr>
-                                ))}
+                                <tr>
+                                  <td>Payment received for Invoice {selectedReceipt.invoice?.invoice_number || 'recorded services'}</td>
+                                  <td style={{textAlign: 'right'}}>{formatMoney(selectedReceipt.amount)}</td>
+                                </tr>
                               </tbody>
                             </table>
 
@@ -2237,6 +2296,14 @@ export default function Home() {
                         </div>
                         <div className="modal-footer" style={{ backgroundColor: 'var(--panel-bg)' }}>
                           <button className="btn btn-secondary" onClick={() => setSelectedReceipt(null)}>Close</button>
+                          <button className="btn btn-secondary" onClick={() => triggerEmailModal(
+                            'receipt-print-area',
+                            `Receipt-${selectedReceipt.receipt_number}.pdf`,
+                            clients.find(c => c.id === selectedReceipt.invoice?.client_id)?.email,
+                            'Receipt'
+                          )}>
+                            <IconMail /> Email Receipt
+                          </button>
                           <button className="btn btn-primary" onClick={() => downloadPdf('receipt-print-area', `Receipt-${selectedReceipt.receipt_number}.pdf`)}>
                             <IconDownload /> Download PDF
                           </button>
@@ -2570,6 +2637,11 @@ export default function Home() {
                                       <IconCheck /> Full Pay
                                     </button>
                                   )}
+                                  {inv.status !== 'paid' && (
+                                    <button className="btn btn-secondary btn-sm" onClick={() => handleSendInvoiceReminder(inv)} title="Email payment reminder">
+                                      <IconMail /> Remind
+                                    </button>
+                                  )}
                                   {inv.status === 'paid' && (
                                     <button className="btn btn-secondary btn-sm" onClick={() => setSelectedReceipt({
                                       ...receipts.find(r => r.invoice_id === inv.id),
@@ -2582,6 +2654,48 @@ export default function Home() {
                                     <IconTrash />
                                   </button>
                                 </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="table-card">
+                    <div className="table-controls">
+                      <h3>Receipts Ledger</h3>
+                    </div>
+                    <div className="table-wrapper">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Receipt #</th>
+                            <th>Invoice #</th>
+                            <th>Client</th>
+                            <th>Payment Date</th>
+                            <th>Method</th>
+                            <th>Amount</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {receipts.map(receipt => (
+                            <tr key={receipt.id}>
+                              <td>{receipt.receipt_number}</td>
+                              <td>{receipt.invoice?.invoice_number || 'Invoice record unavailable'}</td>
+                              <td>{clients.find(client => client.id === receipt.invoice?.client_id)?.name || '—'}</td>
+                              <td>{receipt.payment_date}</td>
+                              <td>{receipt.payment_method}</td>
+                              <td><strong>{formatMoney(receipt.amount)}</strong></td>
+                              <td>
+                                <button
+                                  className="btn btn-secondary btn-sm"
+                                  onClick={() => setSelectedReceipt(receipt)}
+                                  title="View receipt"
+                                >
+                                  View
+                                </button>
                               </td>
                             </tr>
                           ))}
@@ -3176,8 +3290,8 @@ export default function Home() {
                     {clientsWithBirthday.length === 0 ? (
                       <div className="table-card" style={{ padding: '48px', textAlign: 'center' }}>
                         <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🎂</div>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>No birthdays tracked yet. Add a client's date of birth from the Clients & Services tab.</p>
-                        <button className="btn btn-primary" onClick={() => setActiveTab('clients')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>No birthdays tracked yet. Add a client&apos;s date of birth from the Clients & Services tab.</p>
+                        <button className="btn btn-primary" onClick={() => changeActiveTab('clients')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                           <IconPlus /> Go to Clients
                         </button>
                       </div>
@@ -3472,7 +3586,7 @@ export default function Home() {
                               </div>
                               <div style={{ textAlign: 'right' }}>
                                 <p>Date Generated: {new Date().toISOString().split('T')[0]}</p>
-                                <p>System Hash: TCL-{reportMonth}-{Date.now().toString(36).substring(4, 9).toUpperCase()}</p>
+                                <p>System Ref: TCL-{reportMonth}-{Math.round(totalRevenue).toString(36).toUpperCase()}</p>
                               </div>
                             </div>
                           </div>
@@ -3491,8 +3605,7 @@ export default function Home() {
                               onChange={(e) => setRobustPeriod(e.target.value)}
                               style={{ minWidth: '180px' }}
                             >
-                              <option value="2024">Year 2024</option>
-                              <option value="2025">Year 2025</option>
+                              {reportYears.map(year => <option key={year} value={year}>Year {year}</option>)}
                               <option value="custom">Custom Date Range</option>
                             </select>
                           </div>
@@ -3537,7 +3650,7 @@ export default function Home() {
                         </div>
                       ) : !robustData ? (
                         <div className="table-card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                          Select a period above and click "Generate Statement" to load reporting schedules.
+                          Select a period above and click &quot;Generate Statement&quot; to load reporting schedules.
                         </div>
                       ) : (
                         <div className="statement-layout">
@@ -3576,7 +3689,7 @@ export default function Home() {
                               9. Chart of Accounts Index
                             </button>
                             <button className={`statement-sidebar-item ${robustSubTab === 'wp' ? 'active' : ''}`} onClick={() => setRobustSubTab('wp')}>
-                              10. Accountant's Working Papers
+                              10. Accountant&apos;s Working Papers
                             </button>
                           </div>
 
@@ -4045,7 +4158,7 @@ export default function Home() {
 
                               {robustSubTab === 'wp' && (
                                 <div>
-                                  <div className="statement-header-title">Accountant's Working Papers</div>
+                                  <div className="statement-header-title">Accountant&apos;s Working Papers</div>
                                   <div className="statement-subtitle">Bank Reconciliation and Adjusting Journals (NGN)</div>
                                   
                                   <h4 style={{ fontWeight: '700', color: '#1E293B', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>Bank Statement Reconciliation</h4>
@@ -4434,7 +4547,7 @@ export default function Home() {
 
                       {/* PAGE 8: WORKING PAPERS */}
                       <div className="statement-paper">
-                        <div className="statement-header-title">Accountant's Working Papers</div>
+                        <div className="statement-header-title">Accountant&apos;s Working Papers</div>
                         <div className="statement-subtitle">Audit Reconciliations & Adjustment Entries (NGN)</div>
                         
                         <h4 style={{ fontWeight: '700', color: '#1E293B', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>Bank Statement Reconciliation</h4>
@@ -4500,72 +4613,17 @@ export default function Home() {
                     </div>
 
                     <h3 style={{ margin: '24px 0 16px 0', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-                      SMTP Email Server Configuration (For sending invoices/receipts)
+                      Gmail Email Delivery
                     </h3>
-
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>SMTP Host</label>
-                        <input 
-                          type="text" 
-                          value={settings.smtpHost || ''} 
-                          onChange={(e) => setSettings({ ...settings, smtpHost: e.target.value })} 
-                          placeholder="smtp.mailtrap.io"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>SMTP Port</label>
-                        <input 
-                          type="text" 
-                          value={settings.smtpPort || '587'} 
-                          onChange={(e) => setSettings({ ...settings, smtpPort: e.target.value })} 
-                          placeholder="587"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>SMTP Username</label>
-                        <input 
-                          type="text" 
-                          value={settings.smtpUser || ''} 
-                          onChange={(e) => setSettings({ ...settings, smtpUser: e.target.value })} 
-                          placeholder="smtp_user_key"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>SMTP Password</label>
-                        <input 
-                          type="password" 
-                          value={settings.smtpPass || ''} 
-                          onChange={(e) => setSettings({ ...settings, smtpPass: e.target.value })} 
-                          placeholder="••••••••••••••"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Sender Email Address</label>
-                        <input 
-                          type="email" 
-                          value={settings.senderEmail || ''} 
-                          onChange={(e) => setSettings({ ...settings, senderEmail: e.target.value })} 
-                          placeholder="billing@titobilobaconsults.com"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Secure SMTP connection</label>
-                        <select 
-                          value={settings.smtpSecure || 'false'} 
-                          onChange={(e) => setSettings({ ...settings, smtpSecure: e.target.value })}
-                        >
-                          <option value="false">TLS / STARTTLS (Port 587 / 25)</option>
-                          <option value="true">SSL / SMTPS (Port 465)</option>
-                        </select>
-                      </div>
-                    </div>
+                    <p role="status" style={{ color: settings.smtpConfigured ? 'var(--primary-color)' : 'var(--accent-yellow)', marginBottom: '12px' }}>
+                      {settings.smtpConfigured
+                        ? `Gmail is configured${settings.senderEmail ? ` (${settings.senderEmail})` : ''}.`
+                        : 'Gmail is not configured on this server.'}
+                    </p>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                      Invoice, receipt, and payment reminder emails use a Gmail App Password kept in the server environment. Configure
+                      {' '}GMAIL_USER and GMAIL_APP_PASSWORD in the host settings; never enter the app password here or commit it to the repository.
+                    </p>
 
                     <div style={{ marginTop: '24px' }}>
                       <button type="submit" className="btn btn-primary">

@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { requireAuthentication } from '@/lib/auth';
 const db = require('@/lib/db');
+const { isIsoDate, toCurrency } = require('@/lib/accounting');
 
-export async function GET() {
+export async function GET(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const transactions = await db.getTransactions();
     return NextResponse.json(transactions);
@@ -11,18 +15,23 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const body = await request.json();
     const { type, category, amount, date, description, account, client_id, service_id } = body;
     
-    if (!type || !category || !amount || !date || !account) {
+    const numericAmount = toCurrency(Number(amount));
+    if (!['income', 'expense'].includes(type) || !category || !date || !account ||
+        numericAmount === null || numericAmount <= 0 ||
+        !isIsoDate(date)) {
       return NextResponse.json({ error: 'Missing required transaction fields' }, { status: 400 });
     }
     
     const newTx = await db.addTransaction({
       type,
       category,
-      amount: Number(amount),
+      amount: numericAmount,
       date,
       description: description || '',
       account,
@@ -37,6 +46,8 @@ export async function POST(request) {
 }
 
 export async function DELETE(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const { searchParams } = new URL(request.url);
     const idStr = searchParams.get('id');

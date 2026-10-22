@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { requireAuthentication } from '@/lib/auth';
 const db = require('@/lib/db');
+const { isIsoDate } = require('@/lib/accounting');
 
 // Accounting date parsing helper
 function parseDate(dateStr) {
@@ -25,6 +27,8 @@ function getMonthsOwned(purchaseDateStr, yearEndStr) {
 }
 
 export async function GET(request) {
+  const unauthorized = requireAuthentication(request);
+  if (unauthorized) return unauthorized;
   try {
     const { searchParams } = new URL(request.url);
     const year = searchParams.get('year');
@@ -33,19 +37,27 @@ export async function GET(request) {
 
     let startDate, endDate, periodName;
 
-    if (year) {
+    if (year && /^\d{4}$/.test(year)) {
       startDate = `${year}-01-01`;
       endDate = `${year}-12-31`;
       periodName = `Year ${year}`;
-    } else if (customStart && customEnd) {
+    } else if (year) {
+      return NextResponse.json({ error: 'Year must use the YYYY format.' }, { status: 400 });
+    } else if (customStart || customEnd) {
+      if (!customStart || !customEnd ||
+          !isIsoDate(customStart) ||
+          !isIsoDate(customEnd) ||
+          customStart > customEnd) {
+        return NextResponse.json({ error: 'Provide a valid startDate and endDate, with startDate no later than endDate.' }, { status: 400 });
+      }
       startDate = customStart;
       endDate = customEnd;
       periodName = `${customStart} to ${customEnd}`;
     } else {
-      // Default to 2024
-      startDate = '2024-01-01';
-      endDate = '2024-12-31';
-      periodName = 'Year 2024';
+      const currentYear = new Date().getFullYear();
+      startDate = `${currentYear}-01-01`;
+      endDate = `${currentYear}-12-31`;
+      periodName = `Year ${currentYear}`;
     }
 
     const allTransactions = await db.getTransactions();
@@ -56,8 +68,11 @@ export async function GET(request) {
     const periodTxs = allTransactions.filter(t => t.date >= startDate && t.date <= endDate);
 
     // Initial statement setup
-    const INITIAL_BANK_STATEMENT_BALANCE = 100301.33; // June 13, 2023
-    const SHARE_CAPITAL = 100301.33; // Seed share capital
+    const INITIAL_BANK_STATEMENT_BALANCE = Number(process.env.FINANCIAL_OPENING_BANK_BALANCE ?? 100301.33);
+    const SHARE_CAPITAL = Number(process.env.FINANCIAL_SHARE_CAPITAL ?? 100301.33);
+    if (!Number.isFinite(INITIAL_BANK_STATEMENT_BALANCE) || !Number.isFinite(SHARE_CAPITAL) || SHARE_CAPITAL < 0) {
+      return NextResponse.json({ error: 'Financial opening balance configuration must be numeric.' }, { status: 500 });
+    }
 
     // 2. Cash & Bank Balances
     const priorIncome = priorTxs.filter(t => t.type === 'income').reduce((sum, t) => sum + parseFloat(t.amount), 0);
