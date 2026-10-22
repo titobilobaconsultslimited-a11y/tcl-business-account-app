@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+const { getWhatsAppPhoneNumber, normalizeNigeriaPhone } = require('@/lib/phone');
 
 // --- INLINE SVG ICONS FOR ZERO-DEPENDENCY SPEED & SSR SAFETY ---
 const IconDashboard = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>;
@@ -1029,6 +1030,22 @@ export default function Home() {
     } catch (error) {
       console.error('Payment reminder failed:', error);
       alert(error.message || 'Unable to send payment reminder.');
+    }
+  };
+
+  const handleSendClientEmail = async (client, type) => {
+    try {
+      const response = await fetch('/api/email/client-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: client.id, type }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Unable to send email.');
+      alert(`${type === 'birthday' ? 'Birthday wishes' : 'Annual returns reminder'} sent to ${client.email}.`);
+    } catch (error) {
+      console.error('Client email failed:', error);
+      alert(error.message || 'Unable to send email.');
     }
   };
 
@@ -2942,6 +2959,8 @@ export default function Home() {
                                 <tbody>
                                   {allRegisteredClients.map(c => {
                                     const details = getAnnualReturnDetails(c);
+                                    const phone = normalizeNigeriaPhone(c.phone);
+                                    const whatsappNumber = getWhatsAppPhoneNumber(c.phone);
                                     let statusBadge = null;
                                     let statusText = '';
                                     if (c.annual_returns_status === 'done') {
@@ -2968,7 +2987,7 @@ export default function Home() {
                                         <td>
                                           <strong>{c.name}</strong>
                                           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                            {c.phone ? <span>📞 {c.phone}</span> : null}
+                                            {phone ? <span>📞 {phone}</span> : null}
                                             {c.phone && c.email ? ' | ' : null}
                                             {c.email ? <span>✉️ {c.email}</span> : null}
                                           </div>
@@ -2994,8 +3013,8 @@ export default function Home() {
                                         <td>
                                           {c.annual_returns_status === 'pending' ? (
                                             <div style={{ display: 'flex', gap: '8px' }}>
-                                              <a 
-                                                href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waText)}`}
+                                              {whatsappNumber && <a
+                                                href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(waText)}`}
                                                 target="_blank" 
                                                 rel="noopener noreferrer" 
                                                 className="btn btn-secondary btn-sm"
@@ -3003,7 +3022,12 @@ export default function Home() {
                                               >
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                                                 WhatsApp
-                                              </a>
+                                              </a>}
+                                              {c.email && (
+                                                <button className="btn btn-secondary btn-sm" onClick={() => handleSendClientEmail(c, 'annual-returns')}>
+                                                  <IconMail /> Email
+                                                </button>
+                                              )}
                                               <button className="btn btn-primary btn-sm" onClick={() => triggerARSyncModal(c)}>
                                                 <IconCheck /> Mark Filed
                                               </button>
@@ -3045,6 +3069,8 @@ export default function Home() {
                                 <tbody>
                                   {overdueClients.map(c => {
                                     const details = getAnnualReturnDetails(c);
+                                    const phone = normalizeNigeriaPhone(c.phone);
+                                    const whatsappNumber = getWhatsAppPhoneNumber(c.phone);
                                     const regNumDisplay = c.registration_number ? c.registration_number : 'NIL / Pending';
                                     const text = `Hello *${c.name}*,\n\nThis is a friendly reminder from *Titobiloba Consults Limited* regarding the annual returns filing for your entity registered as a *${c.registration_type}* (Reg No: ${regNumDisplay}).\n\n*Next Filing Due Date:* ${c.annual_returns_due_date}\n\n*Payment Breakdown:*\n- Official Filing Cost: ${formatMoney(details.filingFee)}\n- Professional Service Fee: ${formatMoney(details.serviceFee)}\n- Penalty Accrued: ${details.penalty > 0 ? formatMoney(details.penalty) + ' (Overdue)' : 'None'}\n\n*Total Payable:* *${formatMoney(details.total)}*\n\nTo prevent further penalties or CAC query, please reach out to us to process your annual filing. Thank you!`;
                                     return (
@@ -3052,7 +3078,7 @@ export default function Home() {
                                         <td>
                                           <strong>{c.name}</strong>
                                           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                            {c.phone ? <span>📞 {c.phone}</span> : null}
+                                            {phone ? <span>📞 {phone}</span> : null}
                                             {c.phone && c.email ? ' | ' : null}
                                             {c.email ? <span>✉️ {c.email}</span> : null}
                                           </div>
@@ -3074,8 +3100,8 @@ export default function Home() {
                                         <td><strong style={{ color: 'var(--accent-red)' }}>{formatMoney(details.total)}</strong></td>
                                         <td>
                                           <div style={{ display: 'flex', gap: '8px' }}>
-                                            <a 
-                                              href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(text)}`}
+                                            {whatsappNumber && <a
+                                              href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(text)}`}
                                               target="_blank" 
                                               rel="noopener noreferrer" 
                                               className="btn btn-secondary btn-sm"
@@ -3083,7 +3109,12 @@ export default function Home() {
                                             >
                                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                                               WhatsApp
-                                            </a>
+                                            </a>}
+                                            {c.email && (
+                                              <button className="btn btn-secondary btn-sm" onClick={() => handleSendClientEmail(c, 'annual-returns')}>
+                                                <IconMail /> Email
+                                              </button>
+                                            )}
                                             <button className="btn btn-primary btn-sm" onClick={() => triggerARSyncModal(c)}>
                                               <IconCheck /> Mark Filed
                                             </button>
@@ -3120,6 +3151,8 @@ export default function Home() {
                                 <tbody>
                                   {dueSoonClients.map(c => {
                                     const details = getAnnualReturnDetails(c);
+                                    const phone = normalizeNigeriaPhone(c.phone);
+                                    const whatsappNumber = getWhatsAppPhoneNumber(c.phone);
                                     const regNumDisplay = c.registration_number ? c.registration_number : 'NIL / Pending';
                                     const text = `Hello *${c.name}*,\n\nThis is a friendly reminder from *Titobiloba Consults Limited* regarding the annual returns filing for your entity registered as a *${c.registration_type}* (Reg No: ${regNumDisplay}).\n\n*Next Filing Due Date:* ${c.annual_returns_due_date}\n\n*Payment Breakdown:*\n- Official Filing Cost: ${formatMoney(details.filingFee)}\n- Professional Service Fee: ${formatMoney(details.serviceFee)}\n- Penalty Accrued: ${details.penalty > 0 ? formatMoney(details.penalty) + ' (Overdue)' : 'None'}\n\n*Total Payable:* *${formatMoney(details.total)}*\n\nTo prevent further penalties or CAC query, please reach out to us to process your annual filing. Thank you!`;
                                     return (
@@ -3127,7 +3160,7 @@ export default function Home() {
                                         <td>
                                           <strong>{c.name}</strong>
                                           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                            {c.phone ? <span>📞 {c.phone}</span> : null}
+                                            {phone ? <span>📞 {phone}</span> : null}
                                             {c.phone && c.email ? ' | ' : null}
                                             {c.email ? <span>✉️ {c.email}</span> : null}
                                           </div>
@@ -3149,8 +3182,8 @@ export default function Home() {
                                         <td><strong style={{ color: 'var(--primary-color)' }}>{formatMoney(details.total)}</strong></td>
                                         <td>
                                           <div style={{ display: 'flex', gap: '8px' }}>
-                                            <a 
-                                              href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(text)}`}
+                                            {whatsappNumber && <a
+                                              href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(text)}`}
                                               target="_blank" 
                                               rel="noopener noreferrer" 
                                               className="btn btn-secondary btn-sm"
@@ -3158,7 +3191,12 @@ export default function Home() {
                                             >
                                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                                               WhatsApp
-                                            </a>
+                                            </a>}
+                                            {c.email && (
+                                              <button className="btn btn-secondary btn-sm" onClick={() => handleSendClientEmail(c, 'annual-returns')}>
+                                                <IconMail /> Email
+                                              </button>
+                                            )}
                                             <button className="btn btn-primary btn-sm" onClick={() => triggerARSyncModal(c)}>
                                               <IconCheck /> Mark Filed
                                             </button>
@@ -3342,6 +3380,8 @@ export default function Home() {
                                   {monthClients.map(c => {
                                     const [mm, dd] = c.birthday.split('-');
                                     const isToday = parseInt(mm) === todayM && parseInt(dd) === todayD;
+                                    const phone = normalizeNigeriaPhone(c.phone);
+                                    const whatsappNumber = getWhatsAppPhoneNumber(c.phone);
                                     const waMsg = `Hello *${c.name}* 🎉\n\nWishing you a very happy birthday from all of us at *Titobiloba Consults Limited*! 🎂\n\nMay this special day bring you joy, prosperity and continued success. Thank you for being a valued client!\n\n- Titobiloba Consults`;
 
                                     return (
@@ -3353,7 +3393,7 @@ export default function Home() {
                                           {isToday && !c.birthday_wished && (
                                             <span style={{ marginLeft: '8px', fontSize: '1rem' }}>🎉</span>
                                           )}
-                                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone || 'No phone'}</div>
+                                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{phone || 'No phone'}</div>
                                         </td>
                                         <td>
                                           <span style={{ fontWeight: '600', color: isToday ? '#EC4899' : 'inherit' }}>
@@ -3371,18 +3411,22 @@ export default function Home() {
                                         </td>
                                         <td>
                                           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                            {c.phone && (
+                                            {whatsappNumber && (
                                               <a
-                                                href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waMsg)}`}
+                                                href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(waMsg)}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="btn btn-secondary btn-sm"
                                                 style={{ backgroundColor: '#25D366', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                                onClick={() => { if (!c.birthday_wished && isToday) handleMarkBirthdayWished(c); }}
                                               >
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                                                 WhatsApp
                                               </a>
+                                            )}
+                                            {c.email && (
+                                              <button className="btn btn-secondary btn-sm" onClick={() => handleSendClientEmail(c, 'birthday')}>
+                                                <IconMail /> Email
+                                              </button>
                                             )}
                                             {!c.birthday_wished ? (
                                               <button

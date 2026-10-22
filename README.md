@@ -24,6 +24,8 @@ Never commit `.env.local`, a Gmail App Password, database credentials, or the ap
 
 Enable 2-Step Verification for the Gmail account, then create an App Password in the Google Account security settings. Use that generated password only as `GMAIL_APP_PASSWORD`; do not use the normal Gmail password. The app uses Gmail's SMTP service over TLS on port 465. Gmail configuration is server-only and is not returned by settings or API responses.
 
+From the app, send annual returns reminders from the Annual Returns tracker, birthday wishes from Birthdays, and invoice or receipt PDFs from Invoices & Receipts. Nigerian client phone numbers are normalized to `+234` when saved and existing records are migrated; WhatsApp actions open a prefilled message for the user to review and send.
+
 ## Checks
 
 - `npm test` runs unit tests for invoice calculations, date validation, signed sessions, and atomic payment records.

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuthentication } from '@/lib/auth';
 const db = require('@/lib/db');
+const { normalizeNigeriaPhone } = require('@/lib/phone');
 
 export async function GET(request) {
   const unauthorized = requireAuthentication(request);
@@ -24,7 +25,7 @@ export async function POST(request) {
     const newClient = await db.addClient({
       name: body.name,
       email: body.email || '',
-      phone: body.phone || '',
+      phone: normalizeNigeriaPhone(body.phone),
       address: body.address || '',
       registration_type: body.registration_type || null,
       registration_number: body.registration_number || '',
@@ -50,7 +51,7 @@ export async function PUT(request) {
     const updatedClient = await db.updateClient(body.id, {
       name: body.name,
       email: body.email || '',
-      phone: body.phone || '',
+      phone: normalizeNigeriaPhone(body.phone),
       address: body.address || '',
       registration_type: body.registration_type || null,
       registration_number: body.registration_number || '',

@@ -19,6 +19,12 @@ test.after(() => {
 });
 
 test('records invoice, receipt, and ledger amounts together and rejects overpayment', async () => {
+  const phoneClient = await db.addClient({
+    name: 'Phone normalization test',
+    phone: '08031234567',
+  });
+  assert.equal(phoneClient.phone, '+2348031234567');
+
   const invoice = await db.addInvoice({
     invoice_number: 'TEST-ATOMIC-001',
     client_id: 'c1',
